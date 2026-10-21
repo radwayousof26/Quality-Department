@@ -887,10 +887,14 @@ main { max-width: 1320px; }
 <script>
 const $ = id => document.getElementById(id);
 const SUPABASE_URL = "https://hgplhhoufrbovmfhrljs.supabase.co";
-const SUPABASE_KEY = "sb_publishable__ssq31RjN5eBUi-pYtQhIQ_JF4_tYIA";
+const SUPABASE_KEY = "ضعي_هنا_مفتاح_Publishable";
 
 const supabaseClient = window.supabase.createClient(
-  console.log("Supabase client:", supabaseClient);
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+console.log("Supabase client:", supabaseClient);
 
 supabaseClient
   .from("teachers")
