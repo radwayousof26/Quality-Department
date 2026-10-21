@@ -890,6 +890,19 @@ const SUPABASE_URL = "https://hgplhhoufrbovmfhrljs.supabase.co";
 const SUPABASE_KEY = "sb_publishable__ssq31RjN5eBUi-pYtQhIQ_JF4_tYIA";
 
 const supabaseClient = window.supabase.createClient(
+  console.log("Supabase client:", supabaseClient);
+
+supabaseClient
+  .from("teachers")
+  .select("id")
+  .limit(1)
+  .then(({ data, error }) => {
+    if (error) {
+      console.error("Supabase connection error:", error.message);
+    } else {
+      console.log("Supabase connected successfully:", data);
+    }
+  });
   SUPABASE_URL,
   SUPABASE_KEY
 );
