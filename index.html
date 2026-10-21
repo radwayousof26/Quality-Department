@@ -606,11 +606,72 @@ main { max-width: 1320px; }
 @media(prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* شاشة تسجيل الدخول */
+body:not(.authenticated) > header,
+body:not(.authenticated) > main { display: none !important; }
+#loginScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f7f6f1, #fff9d9);
+}
+body.authenticated #loginScreen { display: none; }
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px #17171716;
+  padding: 30px;
+  text-align: center;
+}
+.login-logo {
+  width: 150px;
+  height: 100px;
+  object-fit: contain;
+  margin: 0 auto 12px;
+}
+.login-card h1 { margin: 8px 0 4px; font-size: 25px; }
+.login-card p { color: var(--muted); margin: 0 0 22px; }
+.login-field { text-align: right; margin: 14px 0; }
+.login-field label { display: block; margin-bottom: 6px; font-weight: 700; }
+.login-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+#loginMessage { min-height: 24px; color: var(--red); font-size: 14px; margin-top: 12px; }
+.login-submit { width: 100%; justify-content: center; margin-top: 8px; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
+
+<section id="loginScreen" aria-labelledby="loginTitle">
+  <form class="login-card" onsubmit="loginToSite(event)">
+    <img class="login-logo" src="https://play-lh.googleusercontent.com/SZqQDEDkiLuEZ3OKB08Bt62FBTgTbU6K2k0TV-AuWWgXlouR7_uw1ap-NWoSGRxFu_HQxsYHiNOF8PFYcUQ1=w240-h480-rw" alt="لوجو الخطة">
+    <h1 id="loginTitle">تسجيل الدخول</h1>
+    <p>بوابة قسم الجودة — الخطة</p>
+    <div class="login-field">
+      <label for="loginEmail">البريد الإلكتروني</label>
+      <input id="loginEmail" type="email" autocomplete="username" required>
+    </div>
+    <div class="login-field">
+      <label for="loginPassword">كلمة المرور</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" required>
+    </div>
+    <button id="loginButton" class="btn primary login-submit" type="submit">تسجيل الدخول</button>
+    <div id="loginMessage" role="alert" aria-live="polite"></div>
+  </form>
+</section>
 
 <header>
   <div class="brand">
@@ -619,7 +680,10 @@ main { max-width: 1320px; }
         alt="" aria-hidden="true">
     </div>
   </div>
-  <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
+    <button class="btn secondary" type="button" onclick="logoutFromSite()">تسجيل الخروج</button>
+  </div>
 </header>
 
 <main>
@@ -893,6 +957,57 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
 );
+
+async function loginToSite(event) {
+  event.preventDefault();
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+  const button = $("loginButton");
+  const message = $("loginMessage");
+  button.disabled = true;
+  button.textContent = "جارٍ تسجيل الدخول...";
+  message.textContent = "";
+
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await showAuthenticatedApp();
+  } catch (error) {
+    console.error("خطأ تسجيل الدخول:", error.message);
+    message.textContent = "تعذر تسجيل الدخول. راجعي البريد الإلكتروني وكلمة المرور.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "تسجيل الدخول";
+  }
+}
+
+async function logoutFromSite() {
+  const { error } = await supabaseClient.auth.signOut();
+  if (error) {
+    console.error("خطأ تسجيل الخروج:", error.message);
+    alert("تعذر تسجيل الخروج. حاولي مرة أخرى.");
+    return;
+  }
+  document.body.classList.remove("authenticated");
+  $("loginPassword").value = "";
+  $("loginMessage").textContent = "";
+}
+
+let appInitialized = false;
+async function showAuthenticatedApp() {
+  document.body.classList.add("authenticated");
+  if (appInitialized) return;
+  appInitialized = true;
+  try {
+    await loadData();
+    renderTeachers();
+    renderProblems();
+  } catch (error) {
+    appInitialized = false;
+    console.error("تعذر تحميل بيانات الموقع.", error);
+    alert("تم تسجيل الدخول، لكن تعذر تحميل بيانات الموقع من المتصفح.");
+  }
+}
 
 console.log("Supabase client:", supabaseClient);
 
@@ -1479,15 +1594,15 @@ $("problemSearch").addEventListener("input", renderProblems);
 $("problemFilter").addEventListener("change", renderProblems);
 $("impactFilter").addEventListener("change", renderProblems);
 
-loadData()
-  .catch(error => {
-    console.error("تعذر فتح قاعدة بيانات المتصفح.", error);
-    alert("تعذر فتح قاعدة البيانات المحلية في هذا المتصفح.");
-  })
-  .finally(() => {
-    renderTeachers();
-    renderProblems();
-  });
+supabaseClient.auth.getSession().then(async ({ data, error }) => {
+  if (error) {
+    console.error("تعذر التحقق من جلسة الدخول:", error.message);
+    return;
+  }
+  if (data.session) {
+    await showAuthenticatedApp();
+  }
+});
 </script>
 </body>
 </html>
