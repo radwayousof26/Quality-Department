@@ -970,20 +970,48 @@ async function loadData() {
   }
 }
 
+ async function syncProblemsToSupabase() {
+  const rows = problems.map(p => ({
+    id: p.id,
+    title: p.title,
+    impact: p.impact,
+    status: p.status,
+    description: p.description,
+    action: p.action
+  }));
+
+  if (!rows.length) return true;
+
+  const { error } = await supabaseClient
+    .from("system_issues")
+    .upsert(rows);
+
+  if (error) {
+    console.error("خطأ مزامنة مشاكل السيستم:", error.message);
+    alert("تم الحفظ محليًا، لكن تعذرت المزامنة مع قاعدة البيانات.");
+    return false;
+  }
+
+  console.log("تمت مزامنة مشاكل السيستم مع Supabase.");
+  return true;
+}
 async function saveData() {
   try {
     const database = await openDatabase();
     const transaction = database.transaction("records", "readwrite");
     transaction.objectStore("records").put({ teachers, problems }, "app-data");
+
     await new Promise((resolve, reject) => {
       transaction.oncomplete = resolve;
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
+
+    await syncProblemsToSupabase();
     return true;
   } catch (error) {
-    console.error("تعذر حفظ البيانات في قاعدة بيانات المتصفح.", error);
-    alert("تعذر حفظ البيانات. قد تكون مساحة التخزين ممتلئة؛ صدّر نسخة من البيانات أو قلّل حجم الملفات.");
+    console.error("تعذر حفظ البيانات.", error);
+    alert("تعذر حفظ البيانات. راجعي Console لمعرفة السبب.");
     return false;
   }
 }
