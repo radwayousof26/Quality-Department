@@ -886,7 +886,13 @@ main { max-width: 1320px; }
 
 <script>
 const $ = id => document.getElementById(id);
+const SUPABASE_URL = "https://hgplhhoufrbovmfhrljs.supabase.co";
+const SUPABASE_KEY = "sb_publishable__ssq31RjN5eBUi-pYtQhIQ_JF4_tYIA";
 
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 const STORAGE_KEY = "khotwa-complaints-v1";
 const DATABASE_NAME = "khotwa-complaints-db";
 const DATABASE_VERSION = 1;
