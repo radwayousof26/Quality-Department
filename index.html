@@ -1333,7 +1333,7 @@ function openProblemForm(id = "") {
 $("problemForm").addEventListener("submit", event => {
   event.preventDefault();
 
-  const id = $("problemId").value || String(Date.now());
+const id = $("problemId").value || crypto.randomUUID();
   const existing = problems.find(item => item.id === id);
 
   const problem = {
