@@ -610,6 +610,10 @@ main { max-width: 1320px; }
 /* شاشة تسجيل الدخول */
 body:not(.authenticated) > header,
 body:not(.authenticated) > main { display: none !important; }
+
+body:not(.authenticated) > .navigation {
+  display: none !important;
+}
 #loginScreen {
   min-height: 100vh;
   display: flex;
