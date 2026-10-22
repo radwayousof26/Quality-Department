@@ -1025,6 +1025,12 @@ body.admin-user .admin-only { display: inline-flex !important; }
           <label>الإجراء المطلوب أو الحل</label>
           <textarea id="problemAction"></textarea>
         </div>
+        <div class="field full">
+          <label for="problemFiles">إرفاق صور أو ملفات PDF (اختياري)</label>
+          <input id="problemFiles" type="file" accept="image/*,.pdf,application/pdf" multiple>
+          <small>يمكن اختيار أكثر من ملف، بحد أقصى 15 ميجابايت لكل ملف.</small>
+          <div id="problemExistingFiles" class="attachments"></div>
+        </div>
       </div>
 
       <div class="actions">
@@ -1258,7 +1264,7 @@ async function loadData() {
   // بيانات مشاكل ومقترحات المشتركة تُحمّل من Supabase لكل حساب.
   const { data: remoteProblems, error } = await supabaseClient
     .from("system_issues")
-    .select("id, title, impact, status, description, action");
+    .select("id, title, impact, status, description, action, attachments");
 
   if (error) {
     console.error("تعذر تحميل مشاكل ومقترحات من Supabase:", error.message);
@@ -1274,7 +1280,12 @@ async function loadData() {
     impact: row.impact || "متوسط",
     status: row.status || "جديدة",
     description: row.description || "",
-    action: row.action || ""
+    action: row.action || "",
+    attachments: Array.isArray(row.attachments) ? await Promise.all(row.attachments.map(async file => {
+      if (!file.path) return file;
+      const { data } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
+      return { ...file, data: data?.signedUrl || "" };
+    })) : []
   }));
 
   // قراءة ملفات المعلمين المشتركة، مع الاحتفاظ بالبيانات المحلية إذا كان الجدول السحابي فارغًا.
@@ -1355,7 +1366,8 @@ async function syncProblemsToSupabase() {
     impact: p.impact,
     status: p.status,
     description: p.description,
-    action: p.action
+    action: p.action,
+    attachments: (Array.isArray(p.attachments) ? p.attachments : []).map(file => ({ name: file.name || "مرفق", type: file.type || "", path: file.path || "" }))
   }));
 
   if (!rows.length) return true;
@@ -1912,6 +1924,9 @@ async function openProblemForm(id = "") {
     $("problemStatus").value = problem.status;
     $("problemDescription").value = problem.description;
     $("problemAction").value = problem.action;
+    $("problemExistingFiles").innerHTML = (problem.attachments || []).map(file => `<div class="attachment"><a href="${escapeHTML(file.data || "")}" target="_blank" rel="noopener">${escapeHTML(file.name || "مرفق")}</a></div>`).join("");
+  } else {
+    $("problemExistingFiles").innerHTML = "";
   }
 
   $("problemFormTitle").textContent =
@@ -1933,8 +1948,30 @@ const id = $("problemId").value || crypto.randomUUID();
     impact: $("problemImpact").value,
     status: $("problemStatus").value,
     description: $("problemDescription").value.trim(),
-    action: $("problemAction").value.trim()
+    action: $("problemAction").value.trim(),
+    attachments: existing && Array.isArray(existing.attachments) ? [...existing.attachments] : []
   };
+
+  const pickedFiles = Array.from($("problemFiles").files || []);
+  const allowedFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type === "application/pdf" || /\\.pdf$/i.test(file.name));
+  if (allowedFiles.length !== pickedFiles.length) { alert("اختاري صورًا أو ملفات PDF فقط."); return; }
+  if (allowedFiles.some(file => file.size > 15 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 15 ميجابايت."); return; }
+  try {
+    for (const file of allowedFiles) {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error("تعذرت قراءة الملف: " + file.name));
+        reader.readAsDataURL(file);
+      });
+      const path = await uploadTeacherDataUrl(dataUrl, "system-issues/" + id, file.name);
+      problem.attachments.push({ name: file.name, type: file.type, path });
+    }
+  } catch (uploadError) {
+    console.error("تعذر رفع مرفقات المشكلة:", uploadError);
+    alert("تعذر رفع المرفق. راجعي صلاحيات Storage في Supabase. " + uploadError.message);
+    return;
+  }
 
   if (existing) {
     problems = problems.map(item => item.id === id ? problem : item);
@@ -2002,6 +2039,8 @@ function showProblem(id) {
 
     <h3>الإجراء المطلوب</h3>
     <div class="detail">${escapeHTML(p.action || "لم يُحدد إجراء بعد.")}</div>
+    <h3>المرفقات</h3>
+    <div class="attachments">${(p.attachments || []).map(file => `<div class="attachment"><a href="${escapeHTML(file.data || "")}" target="_blank" rel="noopener">${escapeHTML(file.name || "فتح المرفق")}</a></div>`).join("") || "لا توجد مرفقات."}</div>
   `;
 
   $("detailActions").innerHTML = `
