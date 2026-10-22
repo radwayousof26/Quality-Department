@@ -1604,9 +1604,15 @@ async function loadWorkspaceItems() {
     workspaceLoaded = true;
     ["updates", "suggestions", "reports"].forEach(renderWorkspaceItems);
   } catch (error) {
+    workspaceLoaded = false;
     console.error("تعذر تحميل بيانات الأقسام الجديدة:", error);
+    const message = error?.message || error?.details || error?.hint || "خطأ غير معروف";
+    const safeMessage = escapeHTML(String(message));
     ["updates", "suggestions", "reports"].forEach(type => {
-      $(type + "List").innerHTML = '<div class="empty">تعذر تحميل البيانات من قاعدة البيانات. تأكدي من إنشاء جدول quality_workspace_items وتفعيل صلاحيات Supabase المطلوبة.</div>';
+      $(type + "List").innerHTML =
+        '<div class="empty">تعذر الاتصال بجدول quality_workspace_items.<br><strong>تفاصيل الخطأ:</strong> ' +
+        safeMessage +
+        '<br>افتحي Supabase ثم Table Editor وتأكدي من وجود الجدول، وبعدها راجعي صلاحيات SELECT للمستخدمين المسجلين وصلاحيات INSERT وDELETE لحساب الإدارة.</div>';
     });
   } finally { workspaceLoading = false; }
 }
