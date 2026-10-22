@@ -652,6 +652,8 @@ body.authenticated #loginScreen { display: none; }
 }
 #loginMessage { min-height: 24px; color: var(--red); font-size: 14px; margin-top: 12px; }
 .login-submit { width: 100%; justify-content: center; margin-top: 8px; }
+.admin-only { display: none !important; }
+body.admin-user .admin-only { display: inline-flex !important; }
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -685,6 +687,7 @@ body.authenticated #loginScreen { display: none; }
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <button class="btn secondary admin-only" type="button" onclick="migrateLocalTeachersToCloud()">رفع ملفات المعلمين القديمة للسحابة</button>
     <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
     <button class="btn secondary" type="button" onclick="logoutFromSite()">تسجيل الخروج</button>
   </div>
@@ -1137,6 +1140,33 @@ async function loadData() {
     action: row.action || ""
   }));
 
+  // قراءة ملفات المعلمين المشتركة، مع الاحتفاظ بالبيانات المحلية إذا كان الجدول السحابي فارغًا.
+  const { data: remoteTeachers, error: teachersError } = await supabaseClient
+    .from("teacher_records")
+    .select("id, name, subject, issue, description, status, photo_path, files, updated_at");
+  if (teachersError) throw teachersError;
+
+  if (Array.isArray(remoteTeachers) && remoteTeachers.length) {
+    teachers = await Promise.all(remoteTeachers.map(async row => {
+      let photo = "";
+      if (row.photo_path) {
+        const { data, error } = await supabaseClient.storage.from("quality-files").createSignedUrl(row.photo_path, 3600);
+        if (error) console.warn("تعذر إنشاء رابط الصورة:", error.message);
+        photo = data?.signedUrl || "";
+      }
+      const files = await Promise.all((Array.isArray(row.files) ? row.files : []).map(async file => {
+        let dataUrl = "";
+        if (file.path) {
+          const { data, error } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
+          if (error) console.warn("تعذر إنشاء رابط المرفق:", error.message);
+          dataUrl = data?.signedUrl || "";
+        }
+        return { ...file, path: file.path || "", data: dataUrl };
+      }));
+      return { id:String(row.id), name:row.name||"", subject:row.subject||"", issue:row.issue||"", description:row.description||"", status:row.status||"جديدة", photo, photo_path:row.photo_path||"", files };
+    }));
+  }
+
   // تحديث التخزين المحلي بالنسخة المشتركة حتى تكون الزيارة التالية أسرع.
   try {
     const localDb = await openDatabase();
@@ -1152,7 +1182,54 @@ async function loadData() {
   }
 }
 
- async function syncProblemsToSupabase() {
+ async function uploadTeacherDataUrl(dataUrl, teacherId, fileName) {
+  if (!String(dataUrl || "").startsWith("data:")) return "";
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const safeName = String(fileName || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
+  const path = `${teacherId}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await supabaseClient.storage.from("quality-files").upload(path, blob, { contentType: blob.type || "application/octet-stream", upsert: false });
+  if (error) throw error;
+  return path;
+}
+
+async function persistTeacherToCloud(teacher) {
+  let photoPath = teacher.photo_path || "";
+  if (String(teacher.photo || "").startsWith("data:")) photoPath = await uploadTeacherDataUrl(teacher.photo, teacher.id, "photo");
+  const cloudFiles = [];
+  for (const file of (Array.isArray(teacher.files) ? teacher.files : [])) {
+    let path = file.path || "";
+    if (String(file.data || "").startsWith("data:")) path = await uploadTeacherDataUrl(file.data, teacher.id, file.name);
+    if (!path) throw new Error("تعذر رفع المرفق: " + (file.name || "ملف بدون اسم"));
+    cloudFiles.push({ name:file.name||"ملف", type:file.type||"", path });
+  }
+  const row = { id:String(teacher.id), name:teacher.name||"", subject:teacher.subject||"", issue:teacher.issue||"", description:teacher.description||"", status:teacher.status||"جديدة", photo_path:photoPath||null, files:cloudFiles, updated_at:new Date().toISOString() };
+  const { error } = await supabaseClient.from("teacher_records").upsert(row);
+  if (error) throw error;
+  teacher.photo_path = photoPath;
+  teacher.files = (teacher.files || []).map((file, index) => ({ ...file, path:cloudFiles[index]?.path || file.path || "" }));
+  return true;
+}
+
+async function migrateLocalTeachersToCloud() {
+  if (!(await requireAdmin())) return;
+  if (!teachers.length) { alert("لا توجد ملفات معلمين محفوظة على هذا الجهاز لرفعها."); return; }
+  if (!confirm(`سيتم رفع ${teachers.length} ملف/ملفات معلمين من هذا الجهاز إلى قاعدة البيانات المشتركة. لن تُحذف النسخة المحلية. هل تريدين المتابعة؟`)) return;
+  const button = document.querySelector('button[onclick="migrateLocalTeachersToCloud()"]');
+  if (button) { button.disabled = true; button.textContent = "جارٍ رفع البيانات..."; }
+  try {
+    for (const teacher of teachers) await persistTeacherToCloud(teacher);
+    await saveData();
+    alert("تم رفع ملفات المعلمين إلى قاعدة البيانات المشتركة بنجاح.");
+  } catch (error) {
+    console.error("تعذر رفع ملفات المعلمين القديمة:", error);
+    alert("تعذر إكمال الرفع. البيانات المحلية لم تُحذف. راجعي Console لمعرفة الخطأ.");
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "رفع ملفات المعلمين القديمة للسحابة"; }
+  }
+}
+
+async function syncProblemsToSupabase() {
   const rows = problems.map(p => ({
     id: p.id,
     title: p.title,
@@ -1330,30 +1407,25 @@ function removeFile(index) {
 $("teacherForm").addEventListener("submit", async event => {
   event.preventDefault();
   if (!(await requireAdmin())) return;
-
   const id = $("teacherId").value || String(Date.now());
   const existing = teachers.find(item => item.id === id);
-
-  const teacher = {
-    id,
-    name: $("teacherName").value.trim(),
-    subject: $("teacherSubject").value.trim(),
-    issue: $("teacherIssue").value.trim(),
-    description: $("teacherDescription").value.trim(),
-    status: $("teacherStatus").value,
-    photo: photoData,
-    files: [...selectedFiles]
-  };
-
-  if (existing) {
-    teachers = teachers.map(item => item.id === id ? teacher : item);
-  } else {
-    teachers.unshift(teacher);
+  const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
+  const submitButton = $("teacherForm").querySelector('button[type="submit"]');
+  if (submitButton) { submitButton.disabled = true; submitButton.textContent = "جارٍ الحفظ..."; }
+  try {
+    await persistTeacherToCloud(teacher);
+    if (existing) teachers = teachers.map(item => item.id === id ? teacher : item);
+    else teachers.unshift(teacher);
+    const saved = await saveData();
+    if (!saved) throw new Error("تعذر حفظ النسخة المحلية.");
+    closeModal("teacherModal");
+    renderTeachers();
+  } catch (error) {
+    console.error("تعذر حفظ ملف المعلم في السحابة:", error);
+    alert("لم يتم تأكيد حفظ ملف المعلم في السحابة. البيانات المحلية لم تُحذف. راجعي Console لمعرفة الخطأ.");
+  } finally {
+    if (submitButton) { submitButton.disabled = false; submitButton.textContent = "حفظ البيانات"; }
   }
-
-  saveData();
-  closeModal("teacherModal");
-  renderTeachers();
 });
 
 function renderTeachers() {
@@ -1400,8 +1472,10 @@ function renderTeachers() {
 async function deleteTeacher(id) {
   if (!(await requireAdmin())) return;
   if (!confirm("هل تريد حذف ملف المعلم؟")) return;
+  const { error } = await supabaseClient.from("teacher_records").delete().eq("id", String(id));
+  if (error) { console.error("تعذر حذف ملف المعلم:", error.message); alert("تعذر حذف الملف من قاعدة البيانات المشتركة، ولم يتم حذفه من العرض."); return; }
   teachers = teachers.filter(t => t.id !== id);
-  saveData();
+  await saveData();
   renderTeachers();
 }
 
@@ -1475,7 +1549,7 @@ function showTeacher(id) {
 function previewTeacherImage(id, index) {
   const teacher = teachers.find(item => item.id === id);
   const file = teacher?.files[index];
-  if (!file || !String(file.data || "").startsWith("data:image/")) return;
+  if (!file || !file.data || getAttachmentKind(file) !== "image") return;
 
   $("imagePreviewTitle").textContent = file.name || "معاينة الصورة";
   $("previewImage").src = file.data;
@@ -1488,23 +1562,18 @@ function previewTeacherPdf(id, index) {
   const teacher = teachers.find(item => item.id === id);
   const file = teacher?.files[index];
   if (!file || getAttachmentKind(file) !== "pdf" || !file.data) return;
-
   try {
-    const base64 = file.data.split(",")[1];
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const pdfBlob = new Blob([bytes], { type: "application/pdf" });
-
-    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
-    pdfPreviewUrl = URL.createObjectURL(pdfBlob);
+    let previewUrl = file.data;
+    if (String(file.data).startsWith("data:application/pdf")) {
+      const base64 = file.data.split(",")[1]; const binary = atob(base64); const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const pdfBlob = new Blob([bytes], { type: "application/pdf" });
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      pdfPreviewUrl = URL.createObjectURL(pdfBlob); previewUrl = pdfPreviewUrl;
+    }
     $("pdfPreviewTitle").textContent = file.name || "معاينة ملف PDF";
-    $("previewPdf").src = pdfPreviewUrl;
-    $("openPdfInNewTab").href = pdfPreviewUrl;
-    openModal("pdfPreviewModal");
-  } catch (error) {
-    alert("تعذرت معاينة ملف PDF. يمكنك تنزيله وفتحه باستخدام قارئ PDF.");
-  }
+    $("previewPdf").src = previewUrl; $("openPdfInNewTab").href = previewUrl; openModal("pdfPreviewModal");
+  } catch (error) { alert("تعذرت معاينة ملف PDF. يمكنك تنزيله وفتحه باستخدام قارئ PDF."); }
 }
 
 function zoomPreview(amount) {
@@ -1518,14 +1587,9 @@ function resetPreviewZoom() {
 }
 
 function downloadFile(id, index) {
-  const teacher = teachers.find(t => t.id === id);
-  const file = teacher?.files[index];
-  if (!file) return;
-
-  const link = document.createElement("a");
-  link.href = file.data;
-  link.download = file.name;
-  link.click();
+  const teacher = teachers.find(t => t.id === id); const file = teacher?.files[index];
+  if (!file || !file.data) { alert("رابط المرفق غير متاح حاليًا. أعيدي فتح ملف المعلم لتجديد الرابط."); return; }
+  const link = document.createElement("a"); link.href = file.data; link.download = file.name || "attachment"; link.target = "_blank"; link.rel = "noopener"; link.click();
 }
 
 /* إدارة مشاكل السيستم */
