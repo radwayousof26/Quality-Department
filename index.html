@@ -1024,6 +1024,8 @@ async function showAuthenticatedApp() {
     await loadData();
     renderTeachers();
     renderProblems();
+    const savedPage = localStorage.getItem("quality-department-active-page");
+    switchPage(savedPage === "system" ? "system" : "teachers");
   } catch (error) {
     appInitialized = false;
     console.error("تعذر تحميل بيانات الموقع.", error);
@@ -1208,10 +1210,16 @@ function escapeHTML(value = "") {
 }
 
 function switchPage(page) {
-  $("teachersPage").classList.toggle("active", page === "teachers");
-  $("systemPage").classList.toggle("active", page === "system");
-  $("teachersNav").classList.toggle("active", page === "teachers");
-  $("systemNav").classList.toggle("active", page === "system");
+  const selectedPage = page === "system" ? "system" : "teachers";
+  $("teachersPage").classList.toggle("active", selectedPage === "teachers");
+  $("systemPage").classList.toggle("active", selectedPage === "system");
+  $("teachersNav").classList.toggle("active", selectedPage === "teachers");
+  $("systemNav").classList.toggle("active", selectedPage === "system");
+  try {
+    localStorage.setItem("quality-department-active-page", selectedPage);
+  } catch (error) {
+    console.warn("تعذر حفظ آخر صفحة مفتوحة.", error);
+  }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
