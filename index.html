@@ -1365,8 +1365,8 @@ async function syncProblemsToSupabase() {
     .upsert(rows);
 
   if (error) {
-    console.error("خطأ مزامنة مشاكل السيستم:", error.message);
-    alert("تم الحفظ محليًا، لكن تعذرت المزامنة مع قاعدة البيانات.");
+    console.error("خطأ مزامنة مشاكل السيستم:", error.message, error.code || "");
+    alert("لم يتم تأكيد حفظ مشاكل السيستم في قاعدة البيانات.\n" + error.message + (error.code ? "\nرمز الخطأ: " + error.code : ""));
     return false;
   }
 
@@ -1386,7 +1386,8 @@ async function saveData() {
       transaction.onabort = () => reject(transaction.error);
     });
 
-    await syncProblemsToSupabase();
+    const cloudSaved = await syncProblemsToSupabase();
+    if (!cloudSaved) return false;
     return true;
   } catch (error) {
     console.error("تعذر حفظ البيانات.", error);
@@ -1756,9 +1757,19 @@ const id = $("problemId").value || crypto.randomUUID();
     problems.unshift(problem);
   }
 
-  saveData();
-  closeModal("problemModal");
-  renderProblems();
+  const submitButton = $("problemForm").querySelector('button[type="submit"]');
+  if (submitButton) { submitButton.disabled = true; submitButton.textContent = "جارٍ الحفظ..."; }
+  try {
+    const saved = await saveData();
+    if (!saved) {
+      alert("لم يتم تأكيد الحفظ في قاعدة البيانات. راجعي رسالة الخطأ، ولا تعتمدي على ظهور البطاقة وحده.");
+      return;
+    }
+    closeModal("problemModal");
+    renderProblems();
+  } finally {
+    if (submitButton) { submitButton.disabled = false; submitButton.textContent = "حفظ"; }
+  }
 });
 
 function renderProblems() {
@@ -1825,8 +1836,18 @@ function showProblem(id) {
 async function deleteProblem(id) {
   if (!(await requireAdmin())) return;
   if (!confirm("هل تريد حذف المشكلة؟")) return;
+  const { error } = await supabaseClient.from("system_issues").delete().eq("id", id);
+  if (error) {
+    console.error("تعذر حذف مشكلة السيستم من Supabase:", error.message, error.code || "");
+    alert("لم يتم حذف المشكلة من قاعدة البيانات.\n" + error.message);
+    return;
+  }
   problems = problems.filter(p => p.id !== id);
-  saveData();
+  const saved = await saveData();
+  if (!saved) {
+    alert("تم حذف المشكلة من قاعدة البيانات، لكن تعذرت مزامنة بقية مشاكل السيستم.");
+    return;
+  }
   closeModal("detailModal");
   renderProblems();
 }
