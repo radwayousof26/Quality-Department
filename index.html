@@ -1213,6 +1213,26 @@ async function persistTeacherToCloud(teacher) {
   return true;
 }
 
+function normalizeImportedIssueId(value, index) {
+  const raw = value == null || value === "" ? ("missing-" + index) : String(value).trim();
+  // Keep valid UUIDs as-is. Legacy exports may contain numeric or text IDs,
+  // while Supabase system_issues.id is UUID; convert those IDs deterministically.
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) {
+    return raw;
+  }
+  const seeds = [2166136261, 2246822519, 3266489917, 668265263];
+  const multipliers = [16777619, 3266489917, 668265263, 374761393];
+  for (let i = 0; i < raw.length; i++) {
+    const code = raw.charCodeAt(i);
+    for (let j = 0; j < seeds.length; j++) {
+      seeds[j] = Math.imul(seeds[j] ^ (code + j), multipliers[j]) >>> 0;
+    }
+  }
+  let hex = seeds.map(n => n.toString(16).padStart(8, "0")).join("");
+  hex = hex.slice(0, 12) + "5" + hex.slice(13, 16) + "a" + hex.slice(17);
+  return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20, 32);
+}
+
 async function importTeachersFromJson(event) {
   if (!(await requireAdmin())) { event.target.value = ''; return; }
   const input = event.target;
@@ -1229,7 +1249,7 @@ async function importTeachersFromJson(event) {
     const importedProblems = parsed.problems
       .filter(p => p && typeof p === 'object' && (p.id != null || p.title || p.name))
       .map((p, index) => ({
-        id: String(p.id != null ? p.id : ('imported-problem-' + Date.now() + '-' + index)),
+        id: normalizeImportedIssueId(p.id, index),
         title: String(p.title || p.name || p.subject || 'مشكلة سيستم'),
         impact: String(p.impact || p.priority || 'متوسط'),
         status: String(p.status || 'جديدة'),
@@ -1242,7 +1262,7 @@ async function importTeachersFromJson(event) {
       return;
     }
 
-    if (!confirm('سيتم استيراد ' + importedProblems.length + ' مشكلة سيستم فقط. لن نعيد رفع ملفات المعلمين أو مرفقاتهم، ولن نحذف أي بيانات موجودة. إذا تطابق معرّف مشكلة موجودة فسيتم تحديثها. هل تريدين المتابعة؟')) return;
+    if (!confirm('سيتم استيراد ' + importedProblems.length + ' مشكلة سيستم فقط. لن نعيد رفع ملفات المعلمين أو مرفقاتهم، ولن نحذف أي بيانات موجودة. المعرّفات القديمة غير المتوافقة مع UUID ستتحول إلى معرّفات ثابتة حتى لا تتكرر عند إعادة الاستيراد. هل تريدين المتابعة؟')) return;
 
     input.disabled = true;
     const { error } = await supabaseClient
@@ -1291,7 +1311,7 @@ async function importTeachersFromJson(event) {
     alert('تم استيراد ' + importedProblems.length + ' مشكلة سيستم بنجاح. لم نُعِد رفع ملفات المعلمين.');
   } catch (error) {
     console.error('تعذر استيراد مشاكل السيستم من JSON:', error);
-    alert('لم يكتمل استيراد مشاكل السيستم. التفاصيل: ' + (error && error.message ? error.message : String(error)) + '\nلم يتم حذف البيانات القديمة. ابعتيلي صورة هذه الرسالة لو استمرت المشكلة.');
+    alert('لم يكتمل استيراد مشاكل السيستم. التفاصيل: ' + (error && error.message ? error.message : String(error)) + '\nلم يتم حذف البيانات القديمة. ابعتيلي نص هذه الرسالة لو استمرت المشكلة.');
   } finally {
     input.disabled = false;
     input.value = '';
