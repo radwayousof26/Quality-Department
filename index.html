@@ -755,7 +755,6 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <div id="issuesSubnav" class="issues-subnav">
     <button id="teachersSubNav" class="active" onclick="switchPage('teachers')">Teachers</button>
     <button id="systemSubNav" onclick="switchPage('system')">System</button>
-    <button id="suggestionsSubNav" onclick="switchPage('suggestions')">Suggestions</button>
   </div>
 
   <!-- الصفحة الأولى: المعلمون -->
@@ -854,6 +853,19 @@ body.admin-user .admin-only { display: inline-flex !important; }
       </select>
     </div>
     <div class="problem-grid" id="problemGrid"></div>
+
+  <section id="suggestionsPage" class="workspace-page" style="margin-top:28px">
+    <div class="page-header"><div><h2>Suggestions & Requests</h2><p class="muted">المقترحات والطلبات ضمن قسم Issues & Suggestions.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('suggestions')">＋ إضافة مقترح أو طلب</button></div>
+    <div class="workspace-form panel admin-only" id="suggestionsFormPanel" hidden><h2>مقترح أو طلب جديد</h2><form onsubmit="saveWorkspaceItem(event,'suggestions')"><div class="form-grid">
+      <div class="field full"><label>العنوان *</label><input id="suggestionsTitle" required maxlength="180"></div>
+      <div class="field"><label>النوع</label><select id="suggestionsKind"><option>مقترح</option><option>طلب</option></select></div>
+      <div class="field"><label>الأولوية</label><select id="suggestionsPriority"><option>عادية</option><option>متوسطة</option><option>عالية</option><option>عاجلة</option></select></div>
+      <div class="field"><label>الجهة المسؤولة</label><input id="suggestionsResponsible" placeholder="اسم القسم أو المسؤول"></div>
+      <div class="field"><label>الحالة</label><select id="suggestionsStatus"><option>جديد</option><option>قيد المراجعة</option><option>قيد التنفيذ</option><option>تم التنفيذ</option><option>مرفوض</option></select></div>
+      <div class="field full"><label>التفاصيل *</label><textarea id="suggestionsContent" required></textarea></div>
+    </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('suggestions')">إلغاء</button></div></form></div>
+    <div id="suggestionsList" class="workspace-list"></div>
+  </section>
   </section>
 
 
@@ -866,19 +878,6 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <div class="field full"><label>التفاصيل *</label><textarea id="updatesContent" required></textarea></div>
     </div><div class="actions"><button class="btn primary" type="submit">حفظ التحديث</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('updates')">إلغاء</button></div></form></div>
     <div id="updatesList" class="workspace-list"></div>
-  </section>
-
-  <section id="suggestionsPage" class="page workspace-page">
-    <div class="page-header"><div><h1>Suggestions & Requests</h1><p class="muted">تسجيل المقترحات والطلبات وتحديد الأولوية والجهة المسؤولة.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('suggestions')">＋ إضافة مقترح أو طلب</button></div>
-    <div class="workspace-form panel admin-only" id="suggestionsFormPanel" hidden><h2>مقترح أو طلب جديد</h2><form onsubmit="saveWorkspaceItem(event,'suggestions')"><div class="form-grid">
-      <div class="field full"><label>العنوان *</label><input id="suggestionsTitle" required maxlength="180"></div>
-      <div class="field"><label>النوع</label><select id="suggestionsKind"><option>مقترح</option><option>طلب</option></select></div>
-      <div class="field"><label>الأولوية</label><select id="suggestionsPriority"><option>عادية</option><option>متوسطة</option><option>عالية</option><option>عاجلة</option></select></div>
-      <div class="field"><label>الجهة المسؤولة</label><input id="suggestionsResponsible" placeholder="اسم القسم أو المسؤول"></div>
-      <div class="field"><label>الحالة</label><select id="suggestionsStatus"><option>جديد</option><option>قيد المراجعة</option><option>قيد التنفيذ</option><option>تم التنفيذ</option><option>مرفوض</option></select></div>
-      <div class="field full"><label>التفاصيل *</label><textarea id="suggestionsContent" required></textarea></div>
-    </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('suggestions')">إلغاء</button></div></form></div>
-    <div id="suggestionsList" class="workspace-list"></div>
   </section>
 
   <section id="reportsPage" class="page workspace-page">
@@ -1147,7 +1146,7 @@ async function showAuthenticatedApp() {
     renderTeachers();
     renderProblems();
     const savedPage = localStorage.getItem("quality-department-active-page");
-    switchPage(["system", "teachers", "updates", "suggestions", "reports"].includes(savedPage) ? savedPage : "teachers");
+    switchPage(["system", "teachers", "updates", "reports"].includes(savedPage) ? savedPage : "teachers");
     await loadWorkspaceItems();
   } catch (error) {
     appInitialized = false;
@@ -1331,128 +1330,6 @@ async function persistTeacherToCloud(teacher) {
   return true;
 }
 
-function normalizeImportedIssueId(value, index) {
-  const raw = value == null || value === "" ? ("missing-" + index) : String(value).trim();
-  // Keep valid UUIDs as-is. Legacy exports may contain numeric or text IDs,
-  // while Supabase system_issues.id is UUID; convert those IDs deterministically.
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) {
-    return raw;
-  }
-  const seeds = [2166136261, 2246822519, 3266489917, 668265263];
-  const multipliers = [16777619, 3266489917, 668265263, 374761393];
-  for (let i = 0; i < raw.length; i++) {
-    const code = raw.charCodeAt(i);
-    for (let j = 0; j < seeds.length; j++) {
-      seeds[j] = Math.imul(seeds[j] ^ (code + j), multipliers[j]) >>> 0;
-    }
-  }
-  let hex = seeds.map(n => n.toString(16).padStart(8, "0")).join("");
-  hex = hex.slice(0, 12) + "5" + hex.slice(13, 16) + "a" + hex.slice(17);
-  return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20, 32);
-}
-
-async function importTeachersFromJson(event) {
-  if (!(await requireAdmin())) { event.target.value = ''; return; }
-  const input = event.target;
-  const file = input.files && input.files[0];
-  if (!file) return;
-
-  try {
-    const parsed = JSON.parse(await file.text());
-    if (!parsed || !Array.isArray(parsed.problems)) {
-      throw new Error('ملف JSON لا يحتوي على قائمة problems المتوقعة.');
-    }
-
-    // استيراد مشاكل السيستم فقط؛ ملفات المعلمين رُفعت بالفعل ولا نعيد رفع مرفقاتها.
-    const importedProblems = parsed.problems
-      .filter(p => p && typeof p === 'object' && (p.id != null || p.title || p.name))
-      .map((p, index) => ({
-        id: normalizeImportedIssueId(p.id, index),
-        title: String(p.title || p.name || p.subject || 'مشكلة سيستم'),
-        impact: String(p.impact || p.priority || 'متوسط'),
-        status: String(p.status || 'جديدة'),
-        description: String(p.description || p.details || ''),
-        action: String(p.action || p.solution || p.recommendation || '')
-      }));
-
-    if (!importedProblems.length) {
-      alert('لم أجد مشاكل سيستم قابلة للاستيراد داخل ملف JSON. لم يتم تغيير أي بيانات.');
-      return;
-    }
-
-    if (!confirm('سيتم استيراد ' + importedProblems.length + ' مشكلة سيستم فقط. لن نعيد رفع ملفات المعلمين أو مرفقاتهم، ولن نحذف أي بيانات موجودة. المعرّفات القديمة غير المتوافقة مع UUID ستتحول إلى معرّفات ثابتة حتى لا تتكرر عند إعادة الاستيراد. هل تريدين المتابعة؟')) return;
-
-    input.disabled = true;
-    const { error } = await supabaseClient
-      .from('system_issues')
-      .upsert(importedProblems, { onConflict: 'id' });
-
-    if (error) {
-      console.error('تعذر رفع مشاكل السيستم إلى Supabase:', error);
-      throw new Error('فشل رفع مشاكل السيستم: ' + error.message + (error.code ? ' (الرمز: ' + error.code + ')' : ''));
-    }
-
-    const { data: remoteProblems, error: readError } = await supabaseClient
-      .from('system_issues')
-      .select('id, title, impact, status, description, action');
-
-    if (readError) {
-      console.warn('تم رفع المشاكل لكن تعذر إعادة تحميلها:', readError.message);
-      const byId = new Map(problems.map(p => [String(p.id), p]));
-      for (const problem of importedProblems) byId.set(String(problem.id), problem);
-      problems = Array.from(byId.values());
-    } else {
-      problems = (remoteProblems || []).map(row => ({
-        id: String(row.id),
-        title: row.title || '',
-        impact: row.impact || 'متوسط',
-        status: row.status || 'جديدة',
-        description: row.description || '',
-        action: row.action || ''
-      }));
-    }
-
-    try {
-      const database = await openDatabase();
-      const transaction = database.transaction('records', 'readwrite');
-      transaction.objectStore('records').put({ teachers, problems }, 'app-data');
-      await new Promise((resolve, reject) => {
-        transaction.oncomplete = resolve;
-        transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error);
-      });
-    } catch (cacheError) {
-      console.warn('تم رفع المشاكل، لكن تعذر تحديث النسخة المحلية:', cacheError);
-    }
-
-    renderProblems();
-    alert('تم استيراد ' + importedProblems.length + ' مشكلة سيستم بنجاح. لم نُعِد رفع ملفات المعلمين.');
-  } catch (error) {
-    console.error('تعذر استيراد مشاكل السيستم من JSON:', error);
-    alert('لم يكتمل استيراد مشاكل السيستم. التفاصيل: ' + (error && error.message ? error.message : String(error)) + '\nلم يتم حذف البيانات القديمة. ابعتيلي نص هذه الرسالة لو استمرت المشكلة.');
-  } finally {
-    input.disabled = false;
-    input.value = '';
-  }
-}
-async function migrateLocalTeachersToCloud() {
-  if (!(await requireAdmin())) return;
-  if (!teachers.length) { alert("لا توجد ملفات معلمين محفوظة على هذا الجهاز لرفعها."); return; }
-  if (!confirm(`سيتم رفع ${teachers.length} ملف/ملفات معلمين من هذا الجهاز إلى قاعدة البيانات المشتركة. لن تُحذف النسخة المحلية. هل تريدين المتابعة؟`)) return;
-  const button = document.querySelector('button[onclick="migrateLocalTeachersToCloud()"]');
-  if (button) { button.disabled = true; button.textContent = "جارٍ رفع البيانات..."; }
-  try {
-    for (const teacher of teachers) await persistTeacherToCloud(teacher);
-    await saveData();
-    alert("تم رفع ملفات المعلمين إلى قاعدة البيانات المشتركة بنجاح.");
-  } catch (error) {
-    console.error("تعذر رفع ملفات المعلمين القديمة:", error);
-    alert("تعذر إكمال الرفع. البيانات المحلية لم تُحذف. راجعي Console لمعرفة الخطأ.");
-  } finally {
-    if (button) { button.disabled = false; button.textContent = "رفع ملفات المعلمين القديمة للسحابة"; }
-  }
-}
-
 async function syncProblemsToSupabase() {
   const rows = problems.map(p => ({
     id: p.id,
@@ -1515,24 +1392,22 @@ function escapeHTML(value = "") {
 }
 
 function switchPage(page) {
-  const allowed = ["teachers", "system", "updates", "suggestions", "reports"];
+  const allowed = ["teachers", "system", "updates", "reports"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
-  const isIssues = selectedPage === "teachers" || selectedPage === "system" || selectedPage === "suggestions";
+  const isIssues = selectedPage === "teachers" || selectedPage === "system";
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
   $("updatesPage").classList.toggle("active", selectedPage === "updates");
-  $("suggestionsPage").classList.toggle("active", selectedPage === "suggestions");
   $("reportsPage").classList.toggle("active", selectedPage === "reports");
   $("issuesSubnav").style.display = isIssues ? "flex" : "none";
   $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
   $("systemSubNav").classList.toggle("active", selectedPage === "system");
-  $("suggestionsSubNav").classList.toggle("active", selectedPage === "suggestions");
   $("issuesNav").classList.toggle("active", isIssues);
   $("updatesNav").classList.toggle("active", selectedPage === "updates");
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
-  if (["updates", "suggestions", "reports"].includes(selectedPage)) loadWorkspaceItems();
+  if (["updates", "system", "reports"].includes(selectedPage)) loadWorkspaceItems();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
