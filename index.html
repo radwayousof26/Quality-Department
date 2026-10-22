@@ -1008,7 +1008,8 @@ async function logoutFromSite() {
     alert("تعذر تسجيل الخروج. حاولي مرة أخرى.");
     return;
   }
-  document.body.classList.remove("authenticated");
+  document.body.classList.remove("authenticated", "admin-user");
+  appInitialized = false;
   $("loginPassword").value = "";
   $("loginMessage").textContent = "";
 }
