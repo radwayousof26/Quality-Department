@@ -739,9 +739,6 @@ body.admin-user .admin-only { display: inline-flex !important; }
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <button class="btn secondary admin-only" type="button" onclick="migrateLocalTeachersToCloud()">رفع ملفات المعلمين القديمة للسحابة</button>
-    <button class="btn secondary admin-only" type="button" onclick="document.getElementById('teacherJsonFile').click()">استيراد نسخة JSON القديمة</button>
-    <input id="teacherJsonFile" type="file" accept=".json,application/json" hidden onchange="importTeachersFromJson(event)">
     <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
     <button class="btn secondary" type="button" onclick="logoutFromSite()">تسجيل الخروج</button>
   </div>
@@ -749,8 +746,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
 
 <nav class="navigation" aria-label="الأقسام الرئيسية">
   <button id="updatesNav" onclick="switchPage('updates')">Updates & News</button>
-  <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Problems</button>
-  <button id="suggestionsNav" onclick="switchPage('suggestions')">Suggestions & Requests</button>
+  <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Suggestions</button>
   <button id="reportsNav" onclick="switchPage('reports')">Reports & Meetings</button>
 </nav>
 
@@ -759,6 +755,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <div id="issuesSubnav" class="issues-subnav">
     <button id="teachersSubNav" class="active" onclick="switchPage('teachers')">Teachers</button>
     <button id="systemSubNav" onclick="switchPage('system')">System</button>
+    <button id="suggestionsSubNav" onclick="switchPage('suggestions')">Suggestions</button>
   </div>
 
   <!-- الصفحة الأولى: المعلمون -->
@@ -1520,7 +1517,7 @@ function escapeHTML(value = "") {
 function switchPage(page) {
   const allowed = ["teachers", "system", "updates", "suggestions", "reports"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
-  const isIssues = selectedPage === "teachers" || selectedPage === "system";
+  const isIssues = selectedPage === "teachers" || selectedPage === "system" || selectedPage === "suggestions";
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
   $("updatesPage").classList.toggle("active", selectedPage === "updates");
@@ -1529,9 +1526,9 @@ function switchPage(page) {
   $("issuesSubnav").style.display = isIssues ? "flex" : "none";
   $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
   $("systemSubNav").classList.toggle("active", selectedPage === "system");
+  $("suggestionsSubNav").classList.toggle("active", selectedPage === "suggestions");
   $("issuesNav").classList.toggle("active", isIssues);
   $("updatesNav").classList.toggle("active", selectedPage === "updates");
-  $("suggestionsNav").classList.toggle("active", selectedPage === "suggestions");
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
