@@ -1439,14 +1439,20 @@ function closeModal(id) {
 
 document.querySelectorAll(".modal").forEach(modal => {
   modal.addEventListener("click", event => {
-    if (event.target === modal) closeModal(modal.id);
+    // Keep data-entry forms open when the user clicks outside the box.
+    if (event.target === modal && !["teacherModal", "problemModal"].includes(modal.id)) {
+      closeModal(modal.id);
+    }
   });
 });
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") {
     document.querySelectorAll(".modal.show").forEach(modal => {
-      closeModal(modal.id);
+      // Prevent accidental data loss while entering teacher/system issue details.
+      if (!["teacherModal", "problemModal"].includes(modal.id)) {
+        closeModal(modal.id);
+      }
     });
   }
 });
