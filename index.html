@@ -969,7 +969,7 @@ async function isAdminUser() {
 
 async function requireAdmin() {
   if (await isAdminUser()) return true;
-  alert("ليس لديك صلاحية تعديل بيانات موقع الجودة. يمكنك التواصل مع مسؤولة الموقع.");
+  alert("ليس لديك صلاحية لتعديل بيانات الموقع.");
   return false;
 }
 
