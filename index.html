@@ -637,7 +637,7 @@ body.authenticated #loginScreen { display: none; }
 }
 .login-card h1 { margin: 8px 0 4px; font-size: 25px; }
 .login-card p { color: var(--muted); margin: 0 0 22px; }
-.login-field { text-align: right; margin: 14px 0; }
+.login-field { text-align: left; margin: 14px 0; }
 .login-field label { display: block; margin-bottom: 6px; font-weight: 700; }
 .login-field input {
   width: 100%;
@@ -655,20 +655,20 @@ body.authenticated #loginScreen { display: none; }
 
 <body>
 
-<section id="loginScreen" aria-labelledby="loginTitle">
+<section id="loginScreen" lang="en" dir="ltr" aria-labelledby="loginTitle">
   <form class="login-card" onsubmit="loginToSite(event)">
-    <img class="login-logo" src="https://play-lh.googleusercontent.com/SZqQDEDkiLuEZ3OKB08Bt62FBTgTbU6K2k0TV-AuWWgXlouR7_uw1ap-NWoSGRxFu_HQxsYHiNOF8PFYcUQ1=w240-h480-rw" alt="لوجو الخطة">
-    <h1 id="loginTitle">تسجيل الدخول</h1>
-    <p>بوابة قسم الجودة — الخطة</p>
+    <img class="login-logo" src="https://play-lh.googleusercontent.com/SZqQDEDkiLuEZ3OKB08Bt62FBTgTbU6K2k0TV-AuWWgXlouR7_uw1ap-NWoSGRxFu_HQxsYHiNOF8PFYcUQ1=w240-h480-rw" alt="Khotwa logo">
+    <h1 id="loginTitle">Welcome Back</h1>
+    <p>Quality Department Portal · Khotwa</p>
     <div class="login-field">
-      <label for="loginEmail">البريد الإلكتروني</label>
+      <label for="loginEmail">Email address</label>
       <input id="loginEmail" type="email" autocomplete="username" required>
     </div>
     <div class="login-field">
-      <label for="loginPassword">كلمة المرور</label>
+      <label for="loginPassword">Password</label>
       <input id="loginPassword" type="password" autocomplete="current-password" required>
     </div>
-    <button id="loginButton" class="btn primary login-submit" type="submit">تسجيل الدخول</button>
+    <button id="loginButton" class="btn primary login-submit" type="submit">Sign In</button>
     <div id="loginMessage" role="alert" aria-live="polite"></div>
   </form>
 </section>
@@ -965,7 +965,7 @@ async function loginToSite(event) {
   const button = $("loginButton");
   const message = $("loginMessage");
   button.disabled = true;
-  button.textContent = "جارٍ تسجيل الدخول...";
+  button.textContent = "Signing in...";
   message.textContent = "";
 
   try {
@@ -974,10 +974,10 @@ async function loginToSite(event) {
     await showAuthenticatedApp();
   } catch (error) {
     console.error("خطأ تسجيل الدخول:", error.message);
-    message.textContent = "تعذر تسجيل الدخول. راجعي البريد الإلكتروني وكلمة المرور.";
+    message.textContent = "Unable to sign in. Please check your email and password.";
   } finally {
     button.disabled = false;
-    button.textContent = "تسجيل الدخول";
+    button.textContent = "Sign In";
   }
 }
 
