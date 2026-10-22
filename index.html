@@ -168,6 +168,9 @@ p { line-height: 1.8; }
   padding: 20px;
   box-shadow: 0 7px 25px #1454a40c;
 }
+button.stat { width: 100%; color: inherit; font: inherit; text-align: right; cursor: pointer; transition: transform .2s, box-shadow .2s; }
+button.stat:hover { transform: translateY(-2px); box-shadow: 0 10px 25px #1454a420; }
+button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 
 .stat span {
   color: var(--muted);
@@ -776,22 +779,25 @@ body.admin-user .admin-only { display: inline-flex !important; }
         <span>الشكاوى التي تحتاج متابعة</span>
         <strong id="complaintCount">0</strong>
       </div>
-      <div class="stat dept-stat-operation">
+      <button type="button" class="stat dept-stat-operation department-filter" data-department="Operation" onclick="selectTeacherDepartment('Operation')" aria-pressed="false">
         <span>مشاكل Operation</span><strong id="operationCount">0</strong>
-      </div>
-      <div class="stat dept-stat-data-entry">
+      </button>
+      <button type="button" class="stat dept-stat-data-entry department-filter" data-department="Data Entry" onclick="selectTeacherDepartment('Data Entry')" aria-pressed="false">
         <span>مشاكل Data Entry</span><strong id="dataEntryCount">0</strong>
-      </div>
-      <div class="stat dept-stat-quality">
+      </button>
+      <button type="button" class="stat dept-stat-quality department-filter" data-department="Quality" onclick="selectTeacherDepartment('Quality')" aria-pressed="false">
         <span>مشاكل Quality</span><strong id="qualityCount">0</strong>
-      </div>
-      <div class="stat dept-stat-marketing">
+      </button>
+      <button type="button" class="stat dept-stat-marketing department-filter" data-department="Marketing" onclick="selectTeacherDepartment('Marketing')" aria-pressed="false">
         <span>مشاكل Marketing</span><strong id="marketingCount">0</strong>
-      </div>
+      </button>
+      <button type="button" class="stat department-filter" data-department="all" onclick="selectTeacherDepartment('all')" aria-pressed="false">
+        <span>كل الأقسام</span><strong id="allDepartmentCount">0</strong>
+      </button>
     </div>
 
-    <h2>ملفات المعلمين</h2>
-    <p class="muted">اضغط على صورة المعلم لفتح تفاصيل الشكوى.</p>
+    <h2 id="teacherIssuesHeading">ملفات المعلمين</h2>
+    <p class="muted" id="teacherIssuesHint">اختاري قسمًا من المربعات أعلاه لعرض مشاكله. يمكنك اختيار «كل الأقسام» لعرض كل المشاكل.</p>
     <div class="toolbar">
       <input id="teacherSearch" type="search" placeholder="ابحث بالاسم أو الشكوى أو المادة..." aria-label="البحث في ملفات المعلمين">
       <select id="teacherFilter" aria-label="تصفية شكاوى المعلمين حسب الحالة">
@@ -1780,6 +1786,23 @@ function departmentClass(department) {
   return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing" })[department] || "";
 }
 
+let selectedTeacherDepartment = "";
+
+function selectTeacherDepartment(department) {
+  selectedTeacherDepartment = department;
+  document.querySelectorAll(".department-filter").forEach(button => {
+    const selected = button.dataset.department === department;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  const names = { "Operation": "Operation", "Data Entry": "Data Entry", "Quality": "Quality", "Marketing": "Marketing", "all": "كل الأقسام" };
+  $("teacherIssuesHeading").textContent = department === "all" ? "مشاكل كل الأقسام" : "مشاكل قسم " + names[department];
+  $("teacherIssuesHint").textContent = department === "all"
+    ? "يعرض هذا القسم كل مشاكل المعلمين."
+    : "يعرض هذا القسم المشاكل المسجلة تحت " + names[department] + " فقط.";
+  renderTeachers();
+}
+
 function renderTeachers() {
   $("teacherCount").textContent = teachers.length;
 
@@ -1791,15 +1814,21 @@ function renderTeachers() {
   $("dataEntryCount").textContent = departmentCount("Data Entry");
   $("qualityCount").textContent = departmentCount("Quality");
   $("marketingCount").textContent = departmentCount("Marketing");
+  $("allDepartmentCount").textContent = teachers.length;
 
   const query = $("teacherSearch").value.trim().toLocaleLowerCase();
   const status = $("teacherFilter").value;
   const visibleTeachers = teachers.filter(t => {
     const searchable = `${t.name} ${t.subject} ${t.issue} ${t.description}`.toLocaleLowerCase();
-    return (!query || searchable.includes(query)) && (!status || t.status === status);
+    const matchesDepartment = selectedTeacherDepartment === "all"
+      ? true
+      : Boolean(selectedTeacherDepartment) && t.department === selectedTeacherDepartment;
+    return matchesDepartment && (!query || searchable.includes(query)) && (!status || t.status === status);
   });
 
-  $("teacherGrid").innerHTML = visibleTeachers.length
+  $("teacherGrid").innerHTML = !selectedTeacherDepartment
+    ? `<div class="empty">اختاري أحد الأقسام أعلاه لعرض المشاكل الخاصة به.</div>`
+    : visibleTeachers.length
     ? visibleTeachers.map(t => `
       <article class="teacher ${departmentClass(t.department)}">
         <button class="btn delete"
