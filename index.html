@@ -347,17 +347,19 @@ p { line-height: 1.8; }
 
 /* التنقل بين الصفحات */
 .navigation {
-  position: fixed;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  width: fit-content;
+  max-width: calc(100vw - 24px);
+  margin: 14px auto 0;
   display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 7px;
   background: var(--blue);
   padding: 7px;
   border-radius: 15px;
   box-shadow: 0 8px 30px #1454a44a;
-  z-index: 10;
+  z-index: 4;
 }
 
 .navigation button {
@@ -388,9 +390,9 @@ p { line-height: 1.8; }
 .workspace-card .workspace-detail { border-top:1px solid var(--border); padding-top:10px; margin-top:10px; white-space:pre-wrap; }
 .workspace-card .workspace-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
 .workspace-card .workspace-actions button { padding:7px 10px; }
-.navigation { max-width:calc(100vw - 20px); overflow-x:auto; }
+.navigation { max-width:calc(100vw - 20px); }
 .navigation button { white-space:nowrap; }
-@media (max-width:650px) { .navigation { width:calc(100vw - 16px); justify-content:flex-start; } .navigation button { flex:0 0 auto; font-size:11px; padding:9px 10px; } }
+@media (max-width:650px) { .navigation { width:calc(100vw - 16px); justify-content:center; } .navigation button { flex:1 1 auto; font-size:11px; padding:9px 10px; } }
 
 /* النوافذ المنبثقة */
 .modal {
@@ -726,6 +728,13 @@ body.admin-user .admin-only { display: inline-flex !important; }
   </div>
 </header>
 
+<nav class="navigation" aria-label="الأقسام الرئيسية">
+  <button id="updatesNav" onclick="switchPage('updates')">Updates & News</button>
+  <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Problems</button>
+  <button id="suggestionsNav" onclick="switchPage('suggestions')">Suggestions & Requests</button>
+  <button id="reportsNav" onclick="switchPage('reports')">Reports & Meetings</button>
+</nav>
+
 <main>
 
   <div id="issuesSubnav" class="issues-subnav">
@@ -862,12 +871,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
 
 </main>
 
-<nav class="navigation" aria-label="الأقسام الرئيسية">
-  <button id="updatesNav" onclick="switchPage('updates')">Updates & News</button>
-  <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Problems</button>
-  <button id="suggestionsNav" onclick="switchPage('suggestions')">Suggestions & Requests</button>
-  <button id="reportsNav" onclick="switchPage('reports')">Reports & Meetings</button>
-</nav>
+
 
 <!-- نموذج إضافة معلم -->
 <div class="modal" id="teacherModal">
@@ -1491,7 +1495,7 @@ function switchPage(page) {
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
-  if (isIssues) loadWorkspaceItems();
+  if (["updates", "suggestions", "reports"].includes(selectedPage)) loadWorkspaceItems();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
