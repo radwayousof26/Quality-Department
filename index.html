@@ -1373,25 +1373,28 @@ async function syncProblemsToSupabase() {
   console.log("تمت مزامنة مشاكل السيستم مع Supabase.");
   return true;
 }
+async function saveLocalCache() {
+  const database = await openDatabase();
+  const transaction = database.transaction("records", "readwrite");
+  transaction.objectStore("records").put({ teachers, problems }, "app-data");
+  await new Promise((resolve, reject) => {
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+  return true;
+}
+
 async function saveData() {
   if (!(await requireAdmin())) return false;
   try {
-    const database = await openDatabase();
-    const transaction = database.transaction("records", "readwrite");
-    transaction.objectStore("records").put({ teachers, problems }, "app-data");
-
-    await new Promise((resolve, reject) => {
-      transaction.oncomplete = resolve;
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error);
-    });
-
+    await saveLocalCache();
     const cloudSaved = await syncProblemsToSupabase();
     if (!cloudSaved) return false;
     return true;
   } catch (error) {
     console.error("تعذر حفظ البيانات.", error);
-    alert("تعذر حفظ البيانات. راجعي Console لمعرفة السبب.");
+    alert("تعذر حفظ البيانات. " + (error.message || "راجعي Console لمعرفة السبب."));
     return false;
   }
 }
@@ -1536,8 +1539,7 @@ $("teacherForm").addEventListener("submit", async event => {
     await persistTeacherToCloud(teacher);
     if (existing) teachers = teachers.map(item => item.id === id ? teacher : item);
     else teachers.unshift(teacher);
-    const saved = await saveData();
-    if (!saved) throw new Error("تعذر حفظ النسخة المحلية.");
+    await saveLocalCache();
     closeModal("teacherModal");
     renderTeachers();
   } catch (error) {
@@ -1595,7 +1597,7 @@ async function deleteTeacher(id) {
   const { error } = await supabaseClient.from("teacher_records").delete().eq("id", String(id));
   if (error) { console.error("تعذر حذف ملف المعلم:", error.message); alert("تعذر حذف الملف من قاعدة البيانات المشتركة، ولم يتم حذفه من العرض."); return; }
   teachers = teachers.filter(t => t.id !== id);
-  await saveData();
+  try { await saveLocalCache(); } catch (cacheError) { console.warn("تم الحذف من السحابة لكن تعذر تحديث النسخة المحلية:", cacheError); }
   renderTeachers();
 }
 
