@@ -710,6 +710,13 @@ body.admin-user .admin-only { display: inline-flex !important; }
 
 /* إخفاء زر Suggestions القديم من القائمة الفرعية نهائيًا */
 #suggestionsSubNav { display: none !important; }
+.password-settings-overlay{position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.65);display:flex;align-items:center;justify-content:center;padding:20px}
+.password-settings-overlay[hidden]{display:none!important}
+.password-settings-card{background:var(--card,#fff);color:var(--text,#172033);width:min(100%,480px);max-height:90vh;overflow:auto;padding:24px;border-radius:18px;box-shadow:0 20px 70px rgba(0,0,0,.25);position:relative}
+.password-settings-card .field{display:flex;flex-direction:column;gap:7px;margin:14px 0}
+.password-settings-card input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px}
+.password-settings-close{float:left}
+#passwordChangeMessage{margin:12px 0}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -746,9 +753,25 @@ body.admin-user .admin-only { display: inline-flex !important; }
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
+    <button class="btn secondary" type="button" onclick="openPasswordSettings()">إعدادات كلمة المرور</button>
     <button class="btn secondary" type="button" onclick="logoutFromSite()">تسجيل الخروج</button>
   </div>
 </header>
+
+<div id="passwordSettings" class="password-settings-overlay" hidden>
+  <section class="password-settings-card" role="dialog" aria-modal="true" aria-labelledby="passwordSettingsTitle">
+    <button type="button" class="btn secondary password-settings-close" onclick="closePasswordSettings()">إغلاق ✕</button>
+    <h2 id="passwordSettingsTitle">تغيير كلمة المرور</h2>
+    <p class="muted">أدخلي كلمة المرور الحالية ثم اختاري كلمة مرور جديدة.</p>
+    <form id="passwordChangeForm" onsubmit="changeAccountPassword(event)">
+      <div class="field"><label for="currentPassword">كلمة المرور الحالية</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
+      <div class="field"><label for="newPassword">كلمة المرور الجديدة</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" required><small>8 أحرف على الأقل.</small></div>
+      <div class="field"><label for="confirmNewPassword">تأكيد كلمة المرور الجديدة</label><input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+      <p id="passwordChangeMessage" role="status" aria-live="polite"></p>
+      <button id="passwordChangeButton" class="btn primary" type="submit">حفظ كلمة المرور</button>
+    </form>
+  </section>
+</div>
 
 <nav class="navigation" aria-label="الأقسام الرئيسية">
   <button id="updatesNav" onclick="switchPage('updates')">Updates & News</button>
@@ -1143,6 +1166,59 @@ async function loginToSite(event) {
   } finally {
     button.disabled = false;
     button.textContent = "Sign In";
+  }
+}
+
+function openPasswordSettings() {
+  $("passwordChangeForm").reset();
+  $("passwordChangeMessage").textContent = "";
+  $("passwordSettings").hidden = false;
+  $("currentPassword").focus();
+}
+
+function closePasswordSettings() {
+  $("passwordSettings").hidden = true;
+}
+
+async function changeAccountPassword(event) {
+  event.preventDefault();
+  const currentPassword = $("currentPassword").value;
+  const newPassword = $("newPassword").value;
+  const confirmPassword = $("confirmNewPassword").value;
+  const message = $("passwordChangeMessage");
+  const button = $("passwordChangeButton");
+  message.textContent = "";
+  if (newPassword.length < 8) {
+    message.textContent = "كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.";
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    message.textContent = "كلمتا المرور الجديدتان غير متطابقتين.";
+    return;
+  }
+  if (newPassword === currentPassword) {
+    message.textContent = "اختاري كلمة مرور مختلفة عن الحالية.";
+    return;
+  }
+  button.disabled = true;
+  button.textContent = "جارٍ التغيير...";
+  try {
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
+    if (userError) throw userError;
+    const email = userData?.user?.email;
+    if (!email) throw new Error("تعذر تحديد البريد الإلكتروني للحساب.");
+    const { error: verifyError } = await supabaseClient.auth.signInWithPassword({ email, password: currentPassword });
+    if (verifyError) throw new Error("كلمة المرور الحالية غير صحيحة.");
+    const { error: updateError } = await supabaseClient.auth.updateUser({ password: newPassword });
+    if (updateError) throw updateError;
+    $("passwordChangeForm").reset();
+    message.textContent = "تم تغيير كلمة المرور بنجاح.";
+  } catch (error) {
+    console.error("تعذر تغيير كلمة المرور:", error);
+    message.textContent = error.message || "تعذر تغيير كلمة المرور. حاولي مرة أخرى.";
+  } finally {
+    button.disabled = false;
+    button.textContent = "حفظ كلمة المرور";
   }
 }
 
