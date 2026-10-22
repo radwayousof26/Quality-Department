@@ -109,6 +109,8 @@ main {
 }
 
 .page.active { display: block; }
+/* Hide the default page until the saved page has been restored to prevent refresh flicker. */
+body:not(.app-ready) .page { display: none !important; }
 
 @keyframes appear {
   from { opacity: 0; transform: translateX(15px); }
@@ -1132,7 +1134,7 @@ async function logoutFromSite() {
     alert("تعذر تسجيل الخروج. حاولي مرة أخرى.");
     return;
   }
-  document.body.classList.remove("authenticated", "admin-user");
+  document.body.classList.remove("authenticated", "admin-user", "app-ready");
   appInitialized = false;
   $("loginPassword").value = "";
   $("loginMessage").textContent = "";
@@ -1150,6 +1152,7 @@ async function showAuthenticatedApp() {
     renderProblems();
     const savedPage = localStorage.getItem("quality-department-active-page");
     switchPage(["system", "teachers", "updates", "reports"].includes(savedPage) ? savedPage : "teachers");
+    document.body.classList.add("app-ready");
     await loadWorkspaceItems();
   } catch (error) {
     appInitialized = false;
