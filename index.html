@@ -1552,6 +1552,8 @@ function closeWorkspaceForm(type) {
 function workspaceField(type, field) { return $(type + field).value.trim(); }
 function renderWorkspaceItems(type) {
   const list = $(type + "List");
+  // بعض أقسام مساحة العمل قد تكون مخفية أو محذوفة من الواجهة؛ لا تحاول الرسم في عنصر غير موجود.
+  if (!list) return;
   const items = workspaceItems.filter(item => item.category === type);
   if (!items.length) {
     list.innerHTML = '<div class="empty">لا توجد بيانات حتى الآن في هذا القسم.</div>';
@@ -1600,7 +1602,9 @@ async function loadWorkspaceItems() {
     const message = error?.message || error?.details || error?.hint || "خطأ غير معروف";
     const safeMessage = escapeHTML(String(message));
     ["updates", "suggestions", "reports"].forEach(type => {
-      $(type + "List").innerHTML =
+      const list = $(type + "List");
+      if (!list) return;
+      list.innerHTML =
         '<div class="empty">تعذر الاتصال بجدول quality_workspace_items.<br><strong>تفاصيل الخطأ:</strong> ' +
         safeMessage +
         '<br>افتحي Supabase ثم Table Editor وتأكدي من وجود الجدول، وبعدها راجعي صلاحيات SELECT للمستخدمين المسجلين وصلاحيات INSERT وDELETE لحساب الإدارة.</div>';
