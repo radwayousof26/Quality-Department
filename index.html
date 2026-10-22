@@ -1091,18 +1091,61 @@ async function loadData() {
 
   if (saved) {
     normalizeData(saved);
+  } else {
+    // نقل البيانات القديمة من localStorage عند أول تشغيل بعد التحديث.
+    try {
+      const legacyData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      normalizeData(legacyData);
+      if (Array.isArray(legacyData.teachers) || Array.isArray(legacyData.problems)) {
+        // نقل النسخة القديمة إلى التخزين المحلي فقط؛ المزامنة ستتم بعد قراءة قاعدة البيانات.
+        const localDb = await openDatabase();
+        const writeTx = localDb.transaction("records", "readwrite");
+        writeTx.objectStore("records").put({ teachers, problems }, "app-data");
+        await new Promise((resolve, reject) => {
+          writeTx.oncomplete = resolve;
+          writeTx.onerror = () => reject(writeTx.error);
+          writeTx.onabort = () => reject(writeTx.error);
+        });
+      }
+    } catch (error) {
+      console.warn("تعذر تحميل البيانات القديمة.", error);
+    }
+  }
+
+  // بيانات مشاكل السيستم المشتركة تُحمّل من Supabase لكل حساب.
+  const { data: remoteProblems, error } = await supabaseClient
+    .from("system_issues")
+    .select("id, title, impact, status, description, action");
+
+  if (error) {
+    console.error("تعذر تحميل مشاكل السيستم من Supabase:", error.message);
+    // لو تعذرت قاعدة البيانات نحتفظ بالنسخة المحلية بدل فقدان عرض البيانات.
     return;
   }
 
-  // نقل البيانات القديمة من localStorage عند أول تشغيل بعد التحديث.
+  const localById = new Map(problems.map(problem => [String(problem.id), problem]));
+  problems = (remoteProblems || []).map(row => ({
+    ...(localById.get(String(row.id)) || {}),
+    id: String(row.id),
+    title: row.title || "",
+    impact: row.impact || "متوسط",
+    status: row.status || "جديدة",
+    description: row.description || "",
+    action: row.action || ""
+  }));
+
+  // تحديث التخزين المحلي بالنسخة المشتركة حتى تكون الزيارة التالية أسرع.
   try {
-    const legacyData = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    normalizeData(legacyData);
-    if (Array.isArray(legacyData.teachers) || Array.isArray(legacyData.problems)) {
-      await saveData();
-    }
-  } catch (error) {
-    console.warn("تعذر تحميل البيانات القديمة.", error);
+    const localDb = await openDatabase();
+    const writeTx = localDb.transaction("records", "readwrite");
+    writeTx.objectStore("records").put({ teachers, problems }, "app-data");
+    await new Promise((resolve, reject) => {
+      writeTx.oncomplete = resolve;
+      writeTx.onerror = () => reject(writeTx.error);
+      writeTx.onabort = () => reject(writeTx.error);
+    });
+  } catch (cacheError) {
+    console.warn("تم تحميل البيانات المشتركة، لكن تعذر تحديث النسخة المحلية.", cacheError);
   }
 }
 
