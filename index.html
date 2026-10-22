@@ -374,6 +374,23 @@ p { line-height: 1.8; }
   font-weight: bold;
 }
 
+/* أقسام التحديثات والمقترحات والتقارير */
+.issues-subnav { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 22px; }
+.issues-subnav button { border:1px solid var(--border); background:white; padding:9px 16px; border-radius:10px; color:var(--text); }
+.issues-subnav button.active { background:var(--yellow); border-color:var(--yellow); font-weight:bold; }
+.workspace-page .workspace-form { margin:0 0 22px; }
+.workspace-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+.workspace-card { background:white; border:1px solid var(--border); border-radius:15px; padding:18px; overflow-wrap:anywhere; }
+.workspace-card h3 { margin:0 0 8px; }
+.workspace-card .workspace-meta { color:var(--muted); font-size:13px; margin-bottom:10px; }
+.workspace-card .workspace-content { white-space:pre-wrap; line-height:1.8; }
+.workspace-card .workspace-detail { border-top:1px solid var(--border); padding-top:10px; margin-top:10px; white-space:pre-wrap; }
+.workspace-card .workspace-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.workspace-card .workspace-actions button { padding:7px 10px; }
+.navigation { max-width:calc(100vw - 20px); overflow-x:auto; }
+.navigation button { white-space:nowrap; }
+@media (max-width:650px) { .navigation { width:calc(100vw - 16px); justify-content:flex-start; } .navigation button { flex:0 0 auto; font-size:11px; padding:9px 10px; } }
+
 /* النوافذ المنبثقة */
 .modal {
   position: fixed;
@@ -710,6 +727,11 @@ body.admin-user .admin-only { display: inline-flex !important; }
 
 <main>
 
+  <div id="issuesSubnav" class="issues-subnav">
+    <button id="teachersSubNav" class="active" onclick="switchPage('teachers')">مشاكل المعلمين</button>
+    <button id="systemSubNav" onclick="switchPage('system')">مشاكل السيستم</button>
+  </div>
+
   <!-- الصفحة الأولى: المعلمون -->
   <section id="teachersPage" class="page active">
     <div class="page-header">
@@ -797,13 +819,53 @@ body.admin-user .admin-only { display: inline-flex !important; }
     <div class="problem-grid" id="problemGrid"></div>
   </section>
 
+
+  <section id="updatesPage" class="page workspace-page">
+    <div class="page-header"><div><h1>Updates & News</h1><p class="muted">أخبار الموقع والتحديثات مع تاريخ كل تحديث.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('updates')">＋ إضافة تحديث</button></div>
+    <div class="workspace-form panel admin-only" id="updatesFormPanel" hidden><h2>إضافة خبر أو تحديث</h2><form onsubmit="saveWorkspaceItem(event,'updates')"><div class="form-grid">
+      <div class="field full"><label>العنوان *</label><input id="updatesTitle" required maxlength="180"></div>
+      <div class="field"><label>تاريخ التحديث</label><input id="updatesDate" type="date"></div>
+      <div class="field"><label>الحالة</label><select id="updatesStatus"><option>منشور</option><option>مسودة</option></select></div>
+      <div class="field full"><label>التفاصيل *</label><textarea id="updatesContent" required></textarea></div>
+    </div><div class="actions"><button class="btn primary" type="submit">حفظ التحديث</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('updates')">إلغاء</button></div></form></div>
+    <div id="updatesList" class="workspace-list"></div>
+  </section>
+
+  <section id="suggestionsPage" class="page workspace-page">
+    <div class="page-header"><div><h1>Suggestions & Requests</h1><p class="muted">تسجيل المقترحات والطلبات وتحديد الأولوية والجهة المسؤولة.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('suggestions')">＋ إضافة مقترح أو طلب</button></div>
+    <div class="workspace-form panel admin-only" id="suggestionsFormPanel" hidden><h2>مقترح أو طلب جديد</h2><form onsubmit="saveWorkspaceItem(event,'suggestions')"><div class="form-grid">
+      <div class="field full"><label>العنوان *</label><input id="suggestionsTitle" required maxlength="180"></div>
+      <div class="field"><label>النوع</label><select id="suggestionsKind"><option>مقترح</option><option>طلب</option></select></div>
+      <div class="field"><label>الأولوية</label><select id="suggestionsPriority"><option>عادية</option><option>متوسطة</option><option>عالية</option><option>عاجلة</option></select></div>
+      <div class="field"><label>الجهة المسؤولة</label><input id="suggestionsResponsible" placeholder="اسم القسم أو المسؤول"></div>
+      <div class="field"><label>الحالة</label><select id="suggestionsStatus"><option>جديد</option><option>قيد المراجعة</option><option>قيد التنفيذ</option><option>تم التنفيذ</option><option>مرفوض</option></select></div>
+      <div class="field full"><label>التفاصيل *</label><textarea id="suggestionsContent" required></textarea></div>
+    </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('suggestions')">إلغاء</button></div></form></div>
+    <div id="suggestionsList" class="workspace-list"></div>
+  </section>
+
+  <section id="reportsPage" class="page workspace-page">
+    <div class="page-header"><div><h1>Reports & Meetings</h1><p class="muted">التقارير ومواعيد الاجتماعات والملخصات والقرارات والمتابعات.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('reports')">＋ إضافة تقرير أو اجتماع</button></div>
+    <div class="workspace-form panel admin-only" id="reportsFormPanel" hidden><h2>تقرير أو اجتماع جديد</h2><form onsubmit="saveWorkspaceItem(event,'reports')"><div class="form-grid">
+      <div class="field full"><label>العنوان *</label><input id="reportsTitle" required maxlength="180"></div>
+      <div class="field"><label>النوع</label><select id="reportsKind"><option>تقرير</option><option>اجتماع</option></select></div>
+      <div class="field"><label>التاريخ / موعد الاجتماع</label><input id="reportsDate" type="date"></div>
+      <div class="field"><label>الجهة المسؤولة</label><input id="reportsResponsible"></div>
+      <div class="field"><label>الحالة</label><select id="reportsStatus"><option>مجدول</option><option>مكتمل</option><option>يحتاج متابعة</option></select></div>
+      <div class="field full"><label>الملخص</label><textarea id="reportsContent"></textarea></div>
+      <div class="field full"><label>القرارات</label><textarea id="reportsDecisions"></textarea></div>
+      <div class="field full"><label>المتابعات والإجراءات المطلوبة</label><textarea id="reportsFollowUp"></textarea></div>
+    </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('reports')">إلغاء</button></div></form></div>
+    <div id="reportsList" class="workspace-list"></div>
+  </section>
+
 </main>
 
-<nav class="navigation">
-  <button id="teachersNav" class="active"
-    onclick="switchPage('teachers')">مشاكل المعلمين</button>
-  <button id="systemNav"
-    onclick="switchPage('system')">مشاكل السيستم</button>
+<nav class="navigation" aria-label="الأقسام الرئيسية">
+  <button id="updatesNav" onclick="switchPage('updates')">Updates & News</button>
+  <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Problems</button>
+  <button id="suggestionsNav" onclick="switchPage('suggestions')">Suggestions & Requests</button>
+  <button id="reportsNav" onclick="switchPage('reports')">Reports & Meetings</button>
 </nav>
 
 <!-- نموذج إضافة معلم -->
@@ -1043,7 +1105,8 @@ async function showAuthenticatedApp() {
     renderTeachers();
     renderProblems();
     const savedPage = localStorage.getItem("quality-department-active-page");
-    switchPage(savedPage === "system" ? "system" : "teachers");
+    switchPage(["system", "teachers", "updates", "suggestions", "reports"].includes(savedPage) ? savedPage : "teachers");
+    await loadWorkspaceItems();
   } catch (error) {
     appInitialized = false;
     console.error("تعذر تحميل بيانات الموقع.", error);
@@ -1410,17 +1473,137 @@ function escapeHTML(value = "") {
 }
 
 function switchPage(page) {
-  const selectedPage = page === "system" ? "system" : "teachers";
+  const allowed = ["teachers", "system", "updates", "suggestions", "reports"];
+  const selectedPage = allowed.includes(page) ? page : "teachers";
+  const isIssues = selectedPage === "teachers" || selectedPage === "system";
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
-  $("teachersNav").classList.toggle("active", selectedPage === "teachers");
-  $("systemNav").classList.toggle("active", selectedPage === "system");
-  try {
-    localStorage.setItem("quality-department-active-page", selectedPage);
-  } catch (error) {
-    console.warn("تعذر حفظ آخر صفحة مفتوحة.", error);
-  }
+  $("updatesPage").classList.toggle("active", selectedPage === "updates");
+  $("suggestionsPage").classList.toggle("active", selectedPage === "suggestions");
+  $("reportsPage").classList.toggle("active", selectedPage === "reports");
+  $("issuesSubnav").style.display = isIssues ? "flex" : "none";
+  $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
+  $("systemSubNav").classList.toggle("active", selectedPage === "system");
+  $("issuesNav").classList.toggle("active", isIssues);
+  $("updatesNav").classList.toggle("active", selectedPage === "updates");
+  $("suggestionsNav").classList.toggle("active", selectedPage === "suggestions");
+  $("reportsNav").classList.toggle("active", selectedPage === "reports");
+  try { localStorage.setItem("quality-department-active-page", selectedPage); }
+  catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
+  if (isIssues) loadWorkspaceItems();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+const workspaceTypes = {
+  updates: { label: "تحديث", tableType: "updates" },
+  suggestions: { label: "مقترح أو طلب", tableType: "suggestions" },
+  reports: { label: "تقرير أو اجتماع", tableType: "reports" }
+};
+let workspaceItems = [];
+let workspaceLoaded = false;
+let workspaceLoading = false;
+
+function openWorkspaceForm(type) {
+  if (!workspaceTypes[type]) return;
+  if (!document.body.classList.contains("admin-user")) { alert("إضافة البيانات متاحة لحساب الإدارة فقط."); return; }
+  $(type + "FormPanel").hidden = false;
+  $(type + "FormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function closeWorkspaceForm(type) {
+  const panel = $(type + "FormPanel");
+  if (panel) { panel.hidden = true; panel.querySelector("form").reset(); }
+}
+function workspaceField(type, field) { return $(type + field).value.trim(); }
+function renderWorkspaceItems(type) {
+  const list = $(type + "List");
+  const items = workspaceItems.filter(item => item.category === type);
+  if (!items.length) {
+    list.innerHTML = '<div class="empty">لا توجد بيانات حتى الآن في هذا القسم.</div>';
+    return;
+  }
+  list.innerHTML = items.map(item => {
+    const title = escapeHTML(item.title || "");
+    const date = escapeHTML(item.event_date || "");
+    const status = escapeHTML(item.status || "");
+    const priority = escapeHTML(item.priority || "");
+    const responsible = escapeHTML(item.responsible || "");
+    const content = escapeHTML(item.content || "");
+    const decisions = escapeHTML(item.decisions || "");
+    const followUp = escapeHTML(item.follow_up || "");
+    const kind = escapeHTML(item.kind || "");
+    const details = [
+      kind ? '<div class="workspace-meta">النوع: ' + kind + '</div>' : '',
+      date ? '<div class="workspace-meta">التاريخ: ' + date + '</div>' : '',
+      status ? '<div class="workspace-meta">الحالة: ' + status + '</div>' : '',
+      priority ? '<div class="workspace-meta">الأولوية: ' + priority + '</div>' : '',
+      responsible ? '<div class="workspace-meta">الجهة المسؤولة: ' + responsible + '</div>' : '',
+      content ? '<div class="workspace-content">' + content + '</div>' : '',
+      decisions ? '<div class="workspace-detail"><strong>القرارات</strong><br>' + decisions + '</div>' : '',
+      followUp ? '<div class="workspace-detail"><strong>المتابعات</strong><br>' + followUp + '</div>' : ''
+    ].join("");
+    const removeButton = document.body.classList.contains("admin-user")
+      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(\'' + item.id + '\')">حذف</button></div>' : '';
+    return '<article class="workspace-card"><h3>' + title + '</h3>' + details + removeButton + '</article>';
+  }).join("");
+}
+async function loadWorkspaceItems() {
+  if (workspaceLoading) return;
+  workspaceLoading = true;
+  try {
+    const { data, error } = await supabaseClient.from("quality_workspace_items")
+      .select("id, category, title, content, event_date, priority, responsible, status, kind, decisions, follow_up, created_at")
+      .order("event_date", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    workspaceItems = data || [];
+    workspaceLoaded = true;
+    ["updates", "suggestions", "reports"].forEach(renderWorkspaceItems);
+  } catch (error) {
+    console.error("تعذر تحميل بيانات الأقسام الجديدة:", error);
+    ["updates", "suggestions", "reports"].forEach(type => {
+      $(type + "List").innerHTML = '<div class="empty">تعذر تحميل البيانات من قاعدة البيانات. تأكدي من إنشاء جدول quality_workspace_items وتفعيل صلاحيات Supabase المطلوبة.</div>';
+    });
+  } finally { workspaceLoading = false; }
+}
+async function saveWorkspaceItem(event, type) {
+  event.preventDefault();
+  if (!workspaceTypes[type] || !(await requireAdmin())) return;
+  const payload = {
+    category: type,
+    title: workspaceField(type, "Title"),
+    content: workspaceField(type, "Content"),
+    event_date: type === "updates" ? (workspaceField(type, "Date") || null) : type === "reports" ? (workspaceField(type, "Date") || null) : null,
+    priority: type === "suggestions" ? workspaceField(type, "Priority") : "",
+    responsible: type === "suggestions" || type === "reports" ? workspaceField(type, "Responsible") : "",
+    status: workspaceField(type, "Status"),
+    kind: type === "suggestions" ? workspaceField(type, "Kind") : type === "reports" ? workspaceField(type, "Kind") : "",
+    decisions: type === "reports" ? workspaceField(type, "Decisions") : "",
+    follow_up: type === "reports" ? workspaceField(type, "FollowUp") : ""
+  };
+  try {
+    const { error } = await supabaseClient.from("quality_workspace_items").insert(payload);
+    if (error) throw error;
+    event.target.reset();
+    closeWorkspaceForm(type);
+    await loadWorkspaceItems();
+    alert("تم حفظ البيانات بنجاح.");
+  } catch (error) {
+    console.error("تعذر حفظ بيانات القسم:", error);
+    alert("تعذر الحفظ في قاعدة البيانات: " + (error.message || "تحققي من إعدادات الجدول والصلاحيات."));
+  }
+}
+async function deleteWorkspaceItem(id) {
+  if (!(await requireAdmin())) return;
+  if (!confirm("هل تريدين حذف هذا السجل نهائيًا؟")) return;
+  try {
+    const { error } = await supabaseClient.from("quality_workspace_items").delete().eq("id", id);
+    if (error) throw error;
+    workspaceItems = workspaceItems.filter(item => item.id !== id);
+    ["updates", "suggestions", "reports"].forEach(renderWorkspaceItems);
+  } catch (error) {
+    console.error("تعذر حذف السجل:", error);
+    alert("تعذر الحذف من قاعدة البيانات: " + (error.message || ""));
+  }
 }
 
 function openModal(id) {
