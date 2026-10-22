@@ -816,7 +816,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <section id="systemPage" class="page">
     <div class="page-header">
       <div>
-        <h1>مشاكل السيستم</h1>
+        <h1>مشاكل ومقترحات</h1>
         <p class="muted">اضغط على أي بطاقة لعرض وصف المشكلة والحل المقترح.</p>
       </div>
       <button class="btn primary" onclick="openProblemForm()">
@@ -839,7 +839,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       </div>
     </div>
 
-    <h2>سجل مشاكل السيستم</h2>
+    <h2>سجل مشاكل ومقترحات</h2>
     <div class="toolbar">
       <input id="problemSearch" type="search" placeholder="ابحث بعنوان المشكلة أو وصفها..." aria-label="البحث في مشكلات السيستم">
       <select id="problemFilter" aria-label="تصفية حسب الحالة">
@@ -1240,13 +1240,13 @@ async function loadData() {
     }
   }
 
-  // بيانات مشاكل السيستم المشتركة تُحمّل من Supabase لكل حساب.
+  // بيانات مشاكل ومقترحات المشتركة تُحمّل من Supabase لكل حساب.
   const { data: remoteProblems, error } = await supabaseClient
     .from("system_issues")
     .select("id, title, impact, status, description, action");
 
   if (error) {
-    console.error("تعذر تحميل مشاكل السيستم من Supabase:", error.message);
+    console.error("تعذر تحميل مشاكل ومقترحات من Supabase:", error.message);
     // لو تعذرت قاعدة البيانات نحتفظ بالنسخة المحلية بدل فقدان عرض البيانات.
     return;
   }
@@ -1350,12 +1350,12 @@ async function syncProblemsToSupabase() {
     .upsert(rows);
 
   if (error) {
-    console.error("خطأ مزامنة مشاكل السيستم:", error.message, error.code || "");
-    alert("لم يتم تأكيد حفظ مشاكل السيستم في قاعدة البيانات.\n" + error.message + (error.code ? "\nرمز الخطأ: " + error.code : ""));
+    console.error("خطأ مزامنة مشاكل ومقترحات:", error.message, error.code || "");
+    alert("لم يتم تأكيد حفظ مشاكل ومقترحات في قاعدة البيانات.\n" + error.message + (error.code ? "\nرمز الخطأ: " + error.code : ""));
     return false;
   }
 
-  console.log("تمت مزامنة مشاكل السيستم مع Supabase.");
+  console.log("تمت مزامنة مشاكل ومقترحات مع Supabase.");
   return true;
 }
 async function saveLocalCache() {
@@ -1882,7 +1882,7 @@ function downloadFile(id, index) {
   const link = document.createElement("a"); link.href = file.data; link.download = file.name || "attachment"; link.target = "_blank"; link.rel = "noopener"; link.click();
 }
 
-/* إدارة مشاكل السيستم */
+/* إدارة مشاكل ومقترحات */
 
 async function openProblemForm(id = "") {
   if (!(await requireAdmin())) return;
@@ -2015,7 +2015,7 @@ async function deleteProblem(id) {
   problems = problems.filter(p => p.id !== id);
   const saved = await saveData();
   if (!saved) {
-    alert("تم حذف المشكلة من قاعدة البيانات، لكن تعذرت مزامنة بقية مشاكل السيستم.");
+    alert("تم حذف المشكلة من قاعدة البيانات، لكن تعذرت مزامنة بقية مشاكل ومقترحات.");
     return;
   }
   closeModal("detailModal");
