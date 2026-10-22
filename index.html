@@ -907,11 +907,20 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <div class="field"><label>الحالة</label><select id="updatesStatus"><option>منشور</option><option>مسودة</option></select></div>
       <div class="field full"><label>التفاصيل *</label><textarea id="updatesContent" required></textarea></div>
     </div><div class="actions"><button class="btn primary" type="submit">حفظ التحديث</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('updates')">إلغاء</button></div></form></div>
-    <article class="workspace-card" id="qualityGuidelinesLink" style="margin-bottom:18px;border:2px solid var(--yellow);background:#fffdf0">
-      <h2 style="margin-top:0">Quality Guidelines</h2>
-      <p>افتحي موقع إرشادات الجودة للاطلاع على الدليل والتعليمات.</p>
-      <a class="btn primary" href="https://radwayousof26.github.io/Quality-Guidlines/" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none">فتح دليل الجودة ↗</a>
-    </article>
+    <section id="qualityGuidelinesEmbed" style="margin:0 0 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <h2 style="margin:0">Quality Guidelines</h2>
+        <a href="https://radwayousof26.github.io/Quality-Guidlines/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
+      </div>
+      <iframe
+        src="https://radwayousof26.github.io/Quality-Guidlines/"
+        title="لوحة إرشادات الجودة"
+        loading="lazy"
+        style="display:block;width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--border);border-radius:14px;background:#fff"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+      </iframe>
+    </section>
     <div id="updatesList" class="workspace-list"></div>
   </section>
 
