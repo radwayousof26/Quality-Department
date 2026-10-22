@@ -1418,6 +1418,14 @@ async function loadData() {
   return path;
 }
 
+async function uploadIssueFile(file, issueId) {
+  const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
+  const path = `system-issues/${issueId}/${crypto.randomUUID()}-${safeName}`;
+  const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (file.type || "application/octet-stream");
+  const { error } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType: inferredType, upsert: false });
+  if (error) throw error;
+  return path;
+}
 async function persistTeacherToCloud(teacher) {
   let photoPath = teacher.photo_path || "";
   if (String(teacher.photo || "").startsWith("data:")) photoPath = await uploadTeacherDataUrl(teacher.photo, teacher.id, "photo");
@@ -1968,6 +1976,22 @@ function previewTeacherPdf(id, index) {
   } catch (error) { alert("تعذرت معاينة ملف PDF. يمكنك تنزيله وفتحه باستخدام قارئ PDF."); }
 }
 
+function previewSystemIssueAttachment(id, index) {
+  const problem = problems.find(item => item.id === id);
+  const file = problem?.attachments?.[index];
+  if (!file || !file.data) { alert("رابط المرفق غير متاح حاليًا. أغلقي التفاصيل وافتحيها مرة أخرى لتجديد الرابط."); return; }
+  const kind = getAttachmentKind(file);
+  if (kind === "image") {
+    $("imagePreviewTitle").textContent = file.name || "معاينة الصورة";
+    $("previewImage").src = file.data;
+    $("previewImage").alt = file.name || "معاينة المرفق";
+    resetPreviewZoom(); openModal("imagePreviewModal");
+  } else if (kind === "pdf") {
+    $("pdfPreviewTitle").textContent = file.name || "معاينة ملف PDF";
+    $("previewPdf").src = file.data; $("openPdfInNewTab").href = file.data;
+    openModal("pdfPreviewModal");
+  } else { window.open(file.data, "_blank", "noopener"); }
+}
 function zoomPreview(amount) {
   previewScale = Math.min(4, Math.max(1, previewScale + amount));
   $("previewImage").style.transform = `scale(${previewScale})`;
@@ -2028,19 +2052,14 @@ const id = $("problemId").value || crypto.randomUUID();
   };
 
   const pickedFiles = Array.from($("problemFiles").files || []);
-  const allowedFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type === "application/pdf" || /\\.pdf$/i.test(file.name));
+  const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(file.name));
   if (allowedFiles.length !== pickedFiles.length) { alert("اختاري صورًا أو ملفات PDF فقط."); return; }
   if (allowedFiles.some(file => file.size > 15 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 15 ميجابايت."); return; }
   try {
     for (const file of allowedFiles) {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error("تعذرت قراءة الملف: " + file.name));
-        reader.readAsDataURL(file);
-      });
-      const path = await uploadTeacherDataUrl(dataUrl, "system-issues/" + id, file.name);
-      problem.attachments.push({ name: file.name, type: file.type, path });
+      const path = await uploadIssueFile(file, id);
+      const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (file.type || "");
+      problem.attachments.push({ name: file.name, type: inferredType, path });
     }
   } catch (uploadError) {
     console.error("تعذر رفع مرفقات المشكلة:", uploadError);
@@ -2115,7 +2134,17 @@ function showProblem(id) {
     <h3>الإجراء المطلوب</h3>
     <div class="detail">${escapeHTML(p.action || "لم يُحدد إجراء بعد.")}</div>
     <h3>المرفقات</h3>
-    <div class="attachments">${(p.attachments || []).map(file => `<div class="attachment"><a href="${escapeHTML(file.data || "")}" target="_blank" rel="noopener">${escapeHTML(file.name || "فتح المرفق")}</a></div>`).join("") || "لا توجد مرفقات."}</div>
+    <div class="attachments">${(p.attachments || []).map((file, index) => {
+      const kind = getAttachmentKind(file);
+      const name = escapeHTML(file.name || "مرفق");
+      const data = escapeHTML(file.data || "");
+      const preview = kind === "image"
+        ? `<button type="button" class="image-preview-thumb" onclick="previewSystemIssueAttachment(&quot;${p.id}&quot;, ${index})"><img src="${data}" alt="${name}" style="max-width:180px;max-height:140px;object-fit:contain"><span>معاينة الصورة</span></button>`
+        : kind === "pdf"
+          ? `<button type="button" class="btn secondary" onclick="previewSystemIssueAttachment(&quot;${p.id}&quot;, ${index})">معاينة PDF</button>`
+          : "";
+      return `<div class="attachment"><strong>${name}</strong>${preview}<p><a href="${data}" target="_blank" rel="noopener">فتح / تنزيل المرفق</a></p></div>`;
+    }).join("") || "لا توجد مرفقات."}</div>
   `;
 
   $("detailActions").innerHTML = `
