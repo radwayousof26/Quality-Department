@@ -1103,7 +1103,18 @@ async function requireAdmin() {
 
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
-  SUPABASE_KEY
+  SUPABASE_KEY,
+  {
+    auth: {
+      // Keep each browser tab's login separate, so signing into another account
+      // in a different tab does not replace this tab's session.
+      storage: window.sessionStorage,
+      storageKey: "quality-department-auth",
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  }
 );
 
 async function loginToSite(event) {
