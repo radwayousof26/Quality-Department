@@ -1273,7 +1273,7 @@ async function loadData() {
   }
 
   const localById = new Map(problems.map(problem => [String(problem.id), problem]));
-  problems = (remoteProblems || []).map(row => ({
+  problems = await Promise.all((remoteProblems || []).map(async row => ({
     ...(localById.get(String(row.id)) || {}),
     id: String(row.id),
     title: row.title || "",
@@ -1286,7 +1286,7 @@ async function loadData() {
       const { data } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
       return { ...file, data: data?.signedUrl || "" };
     })) : []
-  }));
+  })));
 
   // قراءة ملفات المعلمين المشتركة، مع الاحتفاظ بالبيانات المحلية إذا كان الجدول السحابي فارغًا.
   const { data: remoteTeachers, error: teachersError } = await supabaseClient
