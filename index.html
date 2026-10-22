@@ -81,11 +81,18 @@ header {
   object-fit: contain;
 }
 
-.brand strong { font-size: 17px; }
+.brand-text { min-width: 0; }
+.brand strong { font-size: 19px; display: block; }
 .brand small {
   display: block;
   color: var(--muted);
   margin-top: 5px;
+  font-size: 13px;
+}
+@media (max-width: 650px) {
+  .brand-logo { width: 78px; height: 58px; }
+  .brand strong { font-size: 16px; }
+  .brand small { font-size: 11px; }
 }
 
 main {
@@ -683,7 +690,11 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <div class="brand">
     <div class="brand-logo">
       <img src="https://play-lh.googleusercontent.com/SZqQDEDkiLuEZ3OKB08Bt62FBTgTbU6K2k0TV-AuWWgXlouR7_uw1ap-NWoSGRxFu_HQxsYHiNOF8PFYcUQ1=w240-h480-rw"
-        alt="" aria-hidden="true">
+        alt="شعار الخطة">
+    </div>
+    <div class="brand-text">
+      <strong>إدارة الجودة</strong>
+      <small>قسم الجودة والمتابعة</small>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
