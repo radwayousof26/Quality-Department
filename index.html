@@ -313,32 +313,34 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .problem-grid .problem .impact {
   display: grid;
   place-items: center;
-  width: 88px;
-  height: 78px;
+  width: 96px;
+  height: 88px;
   padding: 0;
   flex: 0 0 auto;
   background: #f2c900;
-  color: #171717;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  filter: drop-shadow(0 4px 3px #17171730);
+  color: #202431;
+  /* Rounded warning triangle inspired by the supplied reference icon */
+  clip-path: polygon(50% 0%, 56% 2%, 62% 8%, 98% 76%, 100% 84%, 98% 91%, 93% 97%, 86% 100%, 14% 100%, 7% 97%, 2% 91%, 0% 84%, 2% 76%, 38% 8%, 44% 2%);
+  filter: drop-shadow(0 5px 4px #17171722);
+  transition: background-color .2s ease, color .2s ease;
 }
 .problem-grid .problem .impact.impact-high { background: #dc3838; color: white; }
-.problem-grid .problem .impact.impact-medium { background: #f2c900; color: #171717; }
+.problem-grid .problem .impact.impact-medium { background: #f2c900; color: #202431; }
 .problem-grid .problem .impact.impact-low { background: #29a36a; color: white; }
 .problem-grid .problem .impact-icon {
   position: relative;
-  width: 7px;
-  height: 27px;
-  margin-top: 9px;
-  border-radius: 5px;
+  width: 8px;
+  height: 32px;
+  margin-top: 0;
+  border-radius: 8px;
   background: currentColor;
 }
 .problem-grid .problem .impact-icon::after {
   position: absolute;
   right: 0;
-  bottom: -12px;
-  width: 7px;
-  height: 7px;
+  bottom: -13px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: currentColor;
   content: "";
