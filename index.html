@@ -1220,19 +1220,28 @@ async function importTeachersFromJson(event) {
   if (!file) return;
   try {
     const parsed = JSON.parse(await file.text());
-    if (!parsed || !Array.isArray(parsed.teachers)) throw new Error('الملف لا يحتوي على قائمة teachers متوقعة.');
-    const imported = parsed.teachers.filter(t => t && typeof t === 'object' && (t.id || t.name)).map((t, index) => ({ ...t, id: String(t.id || ('imported-' + Date.now() + '-' + index)), files: Array.isArray(t.files) ? t.files : [] }));
-    if (!imported.length) { alert('الملف اتفتح، لكن لم أجد ملفات معلمين داخله.'); return; }
-    if (!confirm('سيتم استيراد ' + imported.length + ' ملف/ملفات معلمين من نسخة JSON إلى قاعدة البيانات المشتركة. لن يتم حذف أي ملفات موجودة. إذا تطابق رقم ملف مع ملف موجود فسيتم تحديثه. هل تريدين المتابعة؟')) return;
+    if (!parsed || (!Array.isArray(parsed.teachers) && !Array.isArray(parsed.problems))) throw new Error('الملف لا يحتوي على قائمة teachers أو problems متوقعة.');
+    const imported = (Array.isArray(parsed.teachers) ? parsed.teachers : []).filter(t => t && typeof t === 'object' && (t.id || t.name)).map((t, index) => ({ ...t, id: String(t.id || ('imported-' + Date.now() + '-' + index)), files: Array.isArray(t.files) ? t.files : [] }));
+    const importedProblems = (Array.isArray(parsed.problems) ? parsed.problems : []).filter(p => p && typeof p === 'object' && (p.id || p.title)).map((p, index) => ({ id: String(p.id || ('imported-problem-' + Date.now() + '-' + index)), title: p.title || '', impact: p.impact || 'متوسط', status: p.status || 'جديدة', description: p.description || '', action: p.action || '' }));
+    if (!imported.length && !importedProblems.length) { alert('الملف اتفتح، لكن لم أجد ملفات معلمين أو مشاكل سيستم داخله.'); return; }
+    if (!confirm('النسخة تحتوي على ' + imported.length + ' ملف/ملفات معلمين و' + importedProblems.length + ' مشكلة سيستم. سيتم رفع البيانات إلى قاعدة البيانات المشتركة. لن تُحذف البيانات الموجودة؛ وإذا تطابق المعرّف فسيتم تحديث السجل. هل تريدين المتابعة؟')) return;
     input.disabled = true;
-    let completed = 0;
-    for (const teacher of imported) { await persistTeacherToCloud(teacher); completed++; }
-    const byId = new Map(teachers.map(t => [String(t.id), t]));
-    for (const teacher of imported) byId.set(String(teacher.id), teacher);
-    teachers = Array.from(byId.values());
+    let completedTeachers = 0;
+    for (const teacher of imported) { await persistTeacherToCloud(teacher); completedTeachers++; }
+    if (importedProblems.length) {
+      const { error: problemsError } = await supabaseClient.from('system_issues').upsert(importedProblems);
+      if (problemsError) throw new Error('تعذر رفع مشاكل السيستم إلى جدول system_issues: ' + problemsError.message);
+    }
+    const teacherById = new Map(teachers.map(t => [String(t.id), t]));
+    for (const teacher of imported) teacherById.set(String(teacher.id), teacher);
+    teachers = Array.from(teacherById.values());
+    const problemById = new Map(problems.map(p => [String(p.id), p]));
+    for (const problem of importedProblems) problemById.set(String(problem.id), problem);
+    problems = Array.from(problemById.values());
     await saveData();
     renderTeachers();
-    alert('تم استيراد ' + completed + ' ملف/ملفات معلمين بنجاح.');
+    renderProblems();
+    alert('تم الاستيراد بنجاح: ' + completedTeachers + ' ملف/ملفات معلمين و' + importedProblems.length + ' مشكلة سيستم.');
   } catch (error) {
     console.error('تعذر استيراد نسخة JSON:', error);
     alert('تعذر استيراد الملف بالكامل. لم يتم حذف ملف JSON الأصلي. قد تكون بعض السجلات رُفعت قبل ظهور الخطأ؛ احتفظي بالملف كما هو وأرسلي لي صورة رسالة الخطأ إن ظهرت.');
