@@ -688,6 +688,8 @@ body.admin-user .admin-only { display: inline-flex !important; }
   </div>
   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <button class="btn secondary admin-only" type="button" onclick="migrateLocalTeachersToCloud()">رفع ملفات المعلمين القديمة للسحابة</button>
+    <button class="btn secondary admin-only" type="button" onclick="document.getElementById('teacherJsonFile').click()">استيراد نسخة JSON القديمة</button>
+    <input id="teacherJsonFile" type="file" accept=".json,application/json" hidden onchange="importTeachersFromJson(event)">
     <button class="btn secondary" onclick="exportData()">تصدير البيانات</button>
     <button class="btn secondary" type="button" onclick="logoutFromSite()">تسجيل الخروج</button>
   </div>
@@ -1211,6 +1213,31 @@ async function persistTeacherToCloud(teacher) {
   return true;
 }
 
+async function importTeachersFromJson(event) {
+  if (!(await requireAdmin())) { event.target.value = ''; return; }
+  const input = event.target;
+  const file = input.files && input.files[0];
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    if (!parsed || !Array.isArray(parsed.teachers)) throw new Error('الملف لا يحتوي على قائمة teachers متوقعة.');
+    const imported = parsed.teachers.filter(t => t && typeof t === 'object' && (t.id || t.name)).map((t, index) => ({ ...t, id: String(t.id || ('imported-' + Date.now() + '-' + index)), files: Array.isArray(t.files) ? t.files : [] }));
+    if (!imported.length) { alert('الملف اتفتح، لكن لم أجد ملفات معلمين داخله.'); return; }
+    if (!confirm('سيتم استيراد ' + imported.length + ' ملف/ملفات معلمين من نسخة JSON إلى قاعدة البيانات المشتركة. لن يتم حذف أي ملفات موجودة. إذا تطابق رقم ملف مع ملف موجود فسيتم تحديثه. هل تريدين المتابعة؟')) return;
+    input.disabled = true;
+    let completed = 0;
+    for (const teacher of imported) { await persistTeacherToCloud(teacher); completed++; }
+    const byId = new Map(teachers.map(t => [String(t.id), t]));
+    for (const teacher of imported) byId.set(String(teacher.id), teacher);
+    teachers = Array.from(byId.values());
+    await saveData();
+    renderTeachers();
+    alert('تم استيراد ' + completed + ' ملف/ملفات معلمين بنجاح.');
+  } catch (error) {
+    console.error('تعذر استيراد نسخة JSON:', error);
+    alert('تعذر استيراد الملف بالكامل. لم يتم حذف ملف JSON الأصلي. قد تكون بعض السجلات رُفعت قبل ظهور الخطأ؛ احتفظي بالملف كما هو وأرسلي لي صورة رسالة الخطأ إن ظهرت.');
+  } finally { input.disabled = false; input.value = ''; }
+}
 async function migrateLocalTeachersToCloud() {
   if (!(await requireAdmin())) return;
   if (!teachers.length) { alert("لا توجد ملفات معلمين محفوظة على هذا الجهاز لرفعها."); return; }
