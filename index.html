@@ -774,8 +774,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
 </div>
 
 <nav class="navigation" aria-label="الأقسام الرئيسية">
-  <button id="updatesNav" onclick="switchPage('updates')">Quality Department Guidelines
-</button>
+  <button id="updatesNav" onclick="switchPage('updates')">Quality Department Guidelines</button>
   <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Suggestions</button>
   <button id="reportsNav" onclick="switchPage('reports')">Reports & Meetings</button>
 </nav>
@@ -898,6 +897,21 @@ body.admin-user .admin-only { display: inline-flex !important; }
   </section>
   </section>
 
+
+  <section id="updatesPage" class="page workspace-page">
+    <div class="page-header">
+      <div><h1>Quality Guidelines</h1><p class="muted">لوحة إرشادات ومعايير عمل قسم الجودة.</p></div>
+      <a href="https://radwayousof26.github.io/Quality-Guidlines/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
+    </div>
+    <iframe
+      src="https://radwayousof26.github.io/Quality-Guidlines/"
+      title="لوحة إرشادات الجودة"
+      loading="lazy"
+      style="display:block;width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--border);border-radius:14px;background:#fff"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </section>
 
   <section id="reportsPage" class="page workspace-page">
     <div class="page-header"><div><h1>Reports & Meetings</h1><p class="muted">التقارير ومواعيد الاجتماعات والملخصات والقرارات والمتابعات.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('reports')">＋ إضافة تقرير أو اجتماع</button></div>
@@ -1236,7 +1250,7 @@ async function showAuthenticatedApp() {
     renderTeachers();
     renderProblems();
     const savedPage = localStorage.getItem("quality-department-active-page");
-    switchPage(["system", "teachers", "reports"].includes(savedPage) ? savedPage : "teachers");
+    switchPage(["system", "teachers", "updates", "reports"].includes(savedPage) ? savedPage : "teachers");
     document.body.classList.add("app-ready");
     await loadWorkspaceItems();
   } catch (error) {
@@ -1497,16 +1511,18 @@ function escapeHTML(value = "") {
 }
 
 function switchPage(page) {
-  const allowed = ["teachers", "system", "reports"];
+  const allowed = ["teachers", "system", "updates", "reports"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
   const isIssues = selectedPage === "teachers" || selectedPage === "system";
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
+  $("updatesPage").classList.toggle("active", selectedPage === "updates");
   $("reportsPage").classList.toggle("active", selectedPage === "reports");
   $("issuesSubnav").style.display = isIssues ? "flex" : "none";
   $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
   $("systemSubNav").classList.toggle("active", selectedPage === "system");
   $("issuesNav").classList.toggle("active", isIssues);
+  $("updatesNav").classList.toggle("active", selectedPage === "updates");
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
