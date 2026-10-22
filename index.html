@@ -1716,7 +1716,7 @@ function departmentClass(department) {
   return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing" })[department] || "";
 }
 
-let selectedTeacherDepartment = "";
+let selectedTeacherDepartment = "all";
 
 function selectTeacherDepartment(department) {
   selectedTeacherDepartment = department;
@@ -1757,9 +1757,7 @@ function renderTeachers() {
     return matchesDepartment && (!query || searchable.includes(query)) && (!status || t.status === status);
   });
 
-  $("teacherGrid").innerHTML = !selectedTeacherDepartment
-    ? `<div class="empty">اختاري أحد الأقسام أعلاه لعرض المشاكل الخاصة به.</div>`
-    : visibleTeachers.length
+  $("teacherGrid").innerHTML = visibleTeachers.length
     ? visibleTeachers.map(t => `
       <article class="teacher ${departmentClass(selectedTeacherDepartment === "all" ? teacherDepartments(t.department)[0] : selectedTeacherDepartment)}">
         <button class="btn delete"
