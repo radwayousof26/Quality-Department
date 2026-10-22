@@ -957,6 +957,22 @@ const $ = id => document.getElementById(id);
 const SUPABASE_URL = "https://hgplhhoufrbovmfhrljs.supabase.co";
 const SUPABASE_KEY = "sb_publishable__ssq31RjN5eBUi-pYtQhIQ_JF4_tYIA";
 
+// واجهة الموقع تسمح بالتعديل لحساب الإدارة فقط.
+// حماية قاعدة البيانات الفعلية يجب أن تبقى مفعّلة عبر RLS في Supabase.
+const ADMIN_EMAIL = "radwa.yousof26@gmail.com";
+
+async function isAdminUser() {
+  const { data, error } = await supabaseClient.auth.getUser();
+  if (error || !data?.user?.email) return false;
+  return data.user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+
+async function requireAdmin() {
+  if (await isAdminUser()) return true;
+  alert("ليس لديك صلاحية تعديل بيانات موقع الجودة. يمكنك التواصل مع مسؤولة الموقع.");
+  return false;
+}
+
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_KEY
@@ -1000,6 +1016,7 @@ async function logoutFromSite() {
 let appInitialized = false;
 async function showAuthenticatedApp() {
   document.body.classList.add("authenticated");
+  document.body.classList.toggle("admin-user", await isAdminUser());
   if (appInitialized) return;
   appInitialized = true;
   try {
@@ -1115,6 +1132,7 @@ async function loadData() {
   return true;
 }
 async function saveData() {
+  if (!(await requireAdmin())) return false;
   try {
     const database = await openDatabase();
     const transaction = database.transaction("records", "readwrite");
@@ -1183,7 +1201,8 @@ document.addEventListener("keydown", event => {
 
 /* إدارة المعلمين والمرفقات */
 
-function openTeacherForm(id = "") {
+async function openTeacherForm(id = "") {
+  if (!(await requireAdmin())) return;
   $("teacherForm").reset();
   $("teacherId").value = id;
   selectedFiles = [];
@@ -1256,8 +1275,9 @@ function removeFile(index) {
   renderFileList();
 }
 
-$("teacherForm").addEventListener("submit", event => {
+$("teacherForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (!(await requireAdmin())) return;
 
   const id = $("teacherId").value || String(Date.now());
   const existing = teachers.find(item => item.id === id);
@@ -1325,7 +1345,8 @@ function renderTeachers() {
     : `<div class="empty">${teachers.length ? "لا توجد نتائج مطابقة لبحثك." : "لا توجد ملفات معلمين حتى الآن."}</div>`;
 }
 
-function deleteTeacher(id) {
+async function deleteTeacher(id) {
+  if (!(await requireAdmin())) return;
   if (!confirm("هل تريد حذف ملف المعلم؟")) return;
   teachers = teachers.filter(t => t.id !== id);
   saveData();
@@ -1457,7 +1478,8 @@ function downloadFile(id, index) {
 
 /* إدارة مشاكل السيستم */
 
-function openProblemForm(id = "") {
+async function openProblemForm(id = "") {
+  if (!(await requireAdmin())) return;
   $("problemForm").reset();
   $("problemId").value = id;
 
@@ -1477,8 +1499,9 @@ function openProblemForm(id = "") {
   openModal("problemModal");
 }
 
-$("problemForm").addEventListener("submit", event => {
+$("problemForm").addEventListener("submit", async event => {
   event.preventDefault();
+  if (!(await requireAdmin())) return;
 
 const id = $("problemId").value || crypto.randomUUID();
   const existing = problems.find(item => item.id === id);
@@ -1564,7 +1587,8 @@ function showProblem(id) {
   openModal("detailModal");
 }
 
-function deleteProblem(id) {
+async function deleteProblem(id) {
+  if (!(await requireAdmin())) return;
   if (!confirm("هل تريد حذف المشكلة؟")) return;
   problems = problems.filter(p => p.id !== id);
   saveData();
