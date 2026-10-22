@@ -1218,34 +1218,84 @@ async function importTeachersFromJson(event) {
   const input = event.target;
   const file = input.files && input.files[0];
   if (!file) return;
+
   try {
     const parsed = JSON.parse(await file.text());
-    if (!parsed || (!Array.isArray(parsed.teachers) && !Array.isArray(parsed.problems))) throw new Error('الملف لا يحتوي على قائمة teachers أو problems متوقعة.');
-    const imported = (Array.isArray(parsed.teachers) ? parsed.teachers : []).filter(t => t && typeof t === 'object' && (t.id || t.name)).map((t, index) => ({ ...t, id: String(t.id || ('imported-' + Date.now() + '-' + index)), files: Array.isArray(t.files) ? t.files : [] }));
-    const importedProblems = (Array.isArray(parsed.problems) ? parsed.problems : []).filter(p => p && typeof p === 'object' && (p.id || p.title)).map((p, index) => ({ id: String(p.id || ('imported-problem-' + Date.now() + '-' + index)), title: p.title || '', impact: p.impact || 'متوسط', status: p.status || 'جديدة', description: p.description || '', action: p.action || '' }));
-    if (!imported.length && !importedProblems.length) { alert('الملف اتفتح، لكن لم أجد ملفات معلمين أو مشاكل سيستم داخله.'); return; }
-    if (!confirm('النسخة تحتوي على ' + imported.length + ' ملف/ملفات معلمين و' + importedProblems.length + ' مشكلة سيستم. سيتم رفع البيانات إلى قاعدة البيانات المشتركة. لن تُحذف البيانات الموجودة؛ وإذا تطابق المعرّف فسيتم تحديث السجل. هل تريدين المتابعة؟')) return;
-    input.disabled = true;
-    let completedTeachers = 0;
-    for (const teacher of imported) { await persistTeacherToCloud(teacher); completedTeachers++; }
-    if (importedProblems.length) {
-      const { error: problemsError } = await supabaseClient.from('system_issues').upsert(importedProblems);
-      if (problemsError) throw new Error('تعذر رفع مشاكل السيستم إلى جدول system_issues: ' + problemsError.message);
+    if (!parsed || !Array.isArray(parsed.problems)) {
+      throw new Error('ملف JSON لا يحتوي على قائمة problems المتوقعة.');
     }
-    const teacherById = new Map(teachers.map(t => [String(t.id), t]));
-    for (const teacher of imported) teacherById.set(String(teacher.id), teacher);
-    teachers = Array.from(teacherById.values());
-    const problemById = new Map(problems.map(p => [String(p.id), p]));
-    for (const problem of importedProblems) problemById.set(String(problem.id), problem);
-    problems = Array.from(problemById.values());
-    await saveData();
-    renderTeachers();
+
+    // استيراد مشاكل السيستم فقط؛ ملفات المعلمين رُفعت بالفعل ولا نعيد رفع مرفقاتها.
+    const importedProblems = parsed.problems
+      .filter(p => p && typeof p === 'object' && (p.id != null || p.title || p.name))
+      .map((p, index) => ({
+        id: String(p.id != null ? p.id : ('imported-problem-' + Date.now() + '-' + index)),
+        title: String(p.title || p.name || p.subject || 'مشكلة سيستم'),
+        impact: String(p.impact || p.priority || 'متوسط'),
+        status: String(p.status || 'جديدة'),
+        description: String(p.description || p.details || ''),
+        action: String(p.action || p.solution || p.recommendation || '')
+      }));
+
+    if (!importedProblems.length) {
+      alert('لم أجد مشاكل سيستم قابلة للاستيراد داخل ملف JSON. لم يتم تغيير أي بيانات.');
+      return;
+    }
+
+    if (!confirm('سيتم استيراد ' + importedProblems.length + ' مشكلة سيستم فقط. لن نعيد رفع ملفات المعلمين أو مرفقاتهم، ولن نحذف أي بيانات موجودة. إذا تطابق معرّف مشكلة موجودة فسيتم تحديثها. هل تريدين المتابعة؟')) return;
+
+    input.disabled = true;
+    const { error } = await supabaseClient
+      .from('system_issues')
+      .upsert(importedProblems, { onConflict: 'id' });
+
+    if (error) {
+      console.error('تعذر رفع مشاكل السيستم إلى Supabase:', error);
+      throw new Error('فشل رفع مشاكل السيستم: ' + error.message + (error.code ? ' (الرمز: ' + error.code + ')' : ''));
+    }
+
+    const { data: remoteProblems, error: readError } = await supabaseClient
+      .from('system_issues')
+      .select('id, title, impact, status, description, action');
+
+    if (readError) {
+      console.warn('تم رفع المشاكل لكن تعذر إعادة تحميلها:', readError.message);
+      const byId = new Map(problems.map(p => [String(p.id), p]));
+      for (const problem of importedProblems) byId.set(String(problem.id), problem);
+      problems = Array.from(byId.values());
+    } else {
+      problems = (remoteProblems || []).map(row => ({
+        id: String(row.id),
+        title: row.title || '',
+        impact: row.impact || 'متوسط',
+        status: row.status || 'جديدة',
+        description: row.description || '',
+        action: row.action || ''
+      }));
+    }
+
+    try {
+      const database = await openDatabase();
+      const transaction = database.transaction('records', 'readwrite');
+      transaction.objectStore('records').put({ teachers, problems }, 'app-data');
+      await new Promise((resolve, reject) => {
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      });
+    } catch (cacheError) {
+      console.warn('تم رفع المشاكل، لكن تعذر تحديث النسخة المحلية:', cacheError);
+    }
+
     renderProblems();
-    alert('تم الاستيراد بنجاح: ' + completedTeachers + ' ملف/ملفات معلمين و' + importedProblems.length + ' مشكلة سيستم.');
+    alert('تم استيراد ' + importedProblems.length + ' مشكلة سيستم بنجاح. لم نُعِد رفع ملفات المعلمين.');
   } catch (error) {
-    console.error('تعذر استيراد نسخة JSON:', error);
-    alert('تعذر استيراد الملف بالكامل. لم يتم حذف ملف JSON الأصلي. قد تكون بعض السجلات رُفعت قبل ظهور الخطأ؛ احتفظي بالملف كما هو وأرسلي لي صورة رسالة الخطأ إن ظهرت.');
-  } finally { input.disabled = false; input.value = ''; }
+    console.error('تعذر استيراد مشاكل السيستم من JSON:', error);
+    alert('لم يكتمل استيراد مشاكل السيستم. التفاصيل: ' + (error && error.message ? error.message : String(error)) + '\nلم يتم حذف البيانات القديمة. ابعتيلي صورة هذه الرسالة لو استمرت المشكلة.');
+  } finally {
+    input.disabled = false;
+    input.value = '';
+  }
 }
 async function migrateLocalTeachersToCloud() {
   if (!(await requireAdmin())) return;
