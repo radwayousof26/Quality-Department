@@ -232,6 +232,9 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .teacher.dept-data-entry { border: 2px solid #3985e8; background: #f4f8ff; }
 .teacher.dept-quality { border: 2px solid #239b63; background: #f2fff7; }
 .teacher.dept-marketing { border: 2px solid #9854bd; background: #fcf5ff; }
+.department-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.department-choices label { display: flex; align-items: center; gap: 7px; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: white; }
+.department-choices input { width: auto; }
 .department-badge { display: inline-block; margin: 8px 0; padding: 5px 11px; border-radius: 18px; font-size: 12px; font-weight: bold; }
 .department-badge.dept-operation { background: #fff0a8; color: #725b00; }
 .department-badge.dept-data-entry { background: #dceaff; color: #1554a5; }
@@ -933,13 +936,13 @@ body.admin-user .admin-only { display: inline-flex !important; }
         </div>
 
         <div class="field">
-          <label>القسم المسؤول *</label>
-          <select id="teacherDepartment" required>
-            <option value="Operation">Operation</option>
-            <option value="Data Entry">Data Entry</option>
-            <option value="Quality">Quality</option>
-            <option value="Marketing">Marketing</option>
-          </select>
+          <label>الأقسام المسؤولة * (يمكن اختيار أكثر من قسم)</label>
+          <div id="teacherDepartmentChoices" class="department-choices">
+            <label><input type="checkbox" name="teacherDepartment" value="Operation"> Operation</label>
+            <label><input type="checkbox" name="teacherDepartment" value="Data Entry"> Data Entry</label>
+            <label><input type="checkbox" name="teacherDepartment" value="Quality"> Quality</label>
+            <label><input type="checkbox" name="teacherDepartment" value="Marketing"> Marketing</label>
+          </div>
         </div>
 
         <div class="field">
@@ -1698,7 +1701,7 @@ async function openTeacherForm(id = "") {
     $("teacherSubject").value = teacher.subject;
     $("teacherIssue").value = teacher.issue;
     $("teacherDescription").value = teacher.description;
-    $("teacherDepartment").value = ["Operation", "Data Entry", "Quality", "Marketing"].includes(teacher.department) ? teacher.department : "Quality";
+    setTeacherDepartments(teacher.department);
     $("teacherStatus").value = teacher.status;
     selectedFiles = [...teacher.files];
     photoData = teacher.photo;
@@ -1764,7 +1767,9 @@ $("teacherForm").addEventListener("submit", async event => {
   if (!(await requireAdmin())) return;
   const id = $("teacherId").value || String(Date.now());
   const existing = teachers.find(item => item.id === id);
-  const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), department:$("teacherDepartment").value, status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
+  const selectedDepartments = [...document.querySelectorAll('input[name="teacherDepartment"]:checked')].map(input => input.value);
+  if (!selectedDepartments.length) { alert("اختاري قسمًا واحدًا على الأقل."); return; }
+  const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), department:JSON.stringify(selectedDepartments), status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
   const submitButton = $("teacherForm").querySelector('button[type="submit"]');
   if (submitButton) { submitButton.disabled = true; submitButton.textContent = "جارٍ الحفظ..."; }
   try {
@@ -1781,6 +1786,23 @@ $("teacherForm").addEventListener("submit", async event => {
     if (submitButton) { submitButton.disabled = false; submitButton.textContent = "حفظ البيانات"; }
   }
 });
+
+function teacherDepartments(value) {
+  if (Array.isArray(value)) return value.filter(d => ["Operation", "Data Entry", "Quality", "Marketing"].includes(d));
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.filter(d => ["Operation", "Data Entry", "Quality", "Marketing"].includes(d));
+  } catch (_) {}
+  return ["Operation", "Data Entry", "Quality", "Marketing"].includes(value) ? [value] : [];
+}
+
+function setTeacherDepartments(value) {
+  const selected = teacherDepartments(value);
+  document.querySelectorAll('input[name="teacherDepartment"]').forEach(input => {
+    input.checked = selected.includes(input.value);
+  });
+}
 
 function departmentClass(department) {
   return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing" })[department] || "";
@@ -1809,7 +1831,7 @@ function renderTeachers() {
   $("complaintCount").textContent =
     teachers.filter(t => t.status !== "تم الحل").length;
 
-  const departmentCount = department => teachers.filter(t => t.department === department).length;
+  const departmentCount = department => teachers.filter(t => teacherDepartments(t.department).includes(department)).length;
   $("operationCount").textContent = departmentCount("Operation");
   $("dataEntryCount").textContent = departmentCount("Data Entry");
   $("qualityCount").textContent = departmentCount("Quality");
@@ -1820,9 +1842,10 @@ function renderTeachers() {
   const status = $("teacherFilter").value;
   const visibleTeachers = teachers.filter(t => {
     const searchable = `${t.name} ${t.subject} ${t.issue} ${t.description}`.toLocaleLowerCase();
+    const departments = teacherDepartments(t.department);
     const matchesDepartment = selectedTeacherDepartment === "all"
       ? true
-      : Boolean(selectedTeacherDepartment) && t.department === selectedTeacherDepartment;
+      : Boolean(selectedTeacherDepartment) && departments.includes(selectedTeacherDepartment);
     return matchesDepartment && (!query || searchable.includes(query)) && (!status || t.status === status);
   });
 
@@ -1830,7 +1853,7 @@ function renderTeachers() {
     ? `<div class="empty">اختاري أحد الأقسام أعلاه لعرض المشاكل الخاصة به.</div>`
     : visibleTeachers.length
     ? visibleTeachers.map(t => `
-      <article class="teacher ${departmentClass(t.department)}">
+      <article class="teacher ${departmentClass(selectedTeacherDepartment === "all" ? teacherDepartments(t.department)[0] : selectedTeacherDepartment)}">
         <button class="btn delete"
           onclick="deleteTeacher('${t.id}')">حذف</button>
 
@@ -1842,7 +1865,7 @@ function renderTeachers() {
 
         <h3>${escapeHTML(t.name)}</h3>
         <p>${escapeHTML(t.subject || "لم تُحدد المادة")}</p>
-        <span class="department-badge ${departmentClass(t.department)}">${escapeHTML(t.department || "غير محدد")}</span>
+        ${teacherDepartments(t.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">غير محدد</span>`}
         <br><span class="status">${escapeHTML(t.status)}</span>
 
         <p>${escapeHTML(t.issue)}</p>
@@ -1891,7 +1914,7 @@ function showTeacher(id) {
     <h3>التفاصيل</h3>
     <div class="detail">${escapeHTML(t.description || "لا توجد تفاصيل إضافية.")}</div>
 
-    <p>القسم المسؤول: <strong>${escapeHTML(t.department || "غير محدد")}</strong></p>
+    <p>الأقسام المسؤولة: <strong>${teacherDepartments(t.department).map(escapeHTML).join("، ") || "غير محدد"}</strong></p>
     <p>المادة: ${escapeHTML(t.subject || "غير محددة")}</p>
     <p>الحالة: ${escapeHTML(t.status)}</p>
 
