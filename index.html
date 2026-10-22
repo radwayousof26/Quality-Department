@@ -156,7 +156,7 @@ p { line-height: 1.8; }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   gap: 14px;
   margin: 25px 0;
 }
@@ -225,6 +225,19 @@ p { line-height: 1.8; }
 
 .teacher h3 { margin: 8px 0; }
 .teacher p { font-size: 13px; color: var(--muted); }
+.teacher.dept-operation { border: 2px solid #e0b400; background: #fffdf0; }
+.teacher.dept-data-entry { border: 2px solid #3985e8; background: #f4f8ff; }
+.teacher.dept-quality { border: 2px solid #239b63; background: #f2fff7; }
+.teacher.dept-marketing { border: 2px solid #9854bd; background: #fcf5ff; }
+.department-badge { display: inline-block; margin: 8px 0; padding: 5px 11px; border-radius: 18px; font-size: 12px; font-weight: bold; }
+.department-badge.dept-operation { background: #fff0a8; color: #725b00; }
+.department-badge.dept-data-entry { background: #dceaff; color: #1554a5; }
+.department-badge.dept-quality { background: #d9f6e5; color: #126b40; }
+.department-badge.dept-marketing { background: #f0dcff; color: #70349a; }
+.stat.dept-stat-operation { border-top: 4px solid #e0b400; }
+.stat.dept-stat-data-entry { border-top: 4px solid #3985e8; }
+.stat.dept-stat-quality { border-top: 4px solid #239b63; }
+.stat.dept-stat-marketing { border-top: 4px solid #9854bd; }
 
 .status {
   display: inline-block;
@@ -763,9 +776,17 @@ body.admin-user .admin-only { display: inline-flex !important; }
         <span>الشكاوى التي تحتاج متابعة</span>
         <strong id="complaintCount">0</strong>
       </div>
-      <div class="stat">
-        <span>عدد المرفقات</span>
-        <strong id="attachmentCount">0</strong>
+      <div class="stat dept-stat-operation">
+        <span>مشاكل Operation</span><strong id="operationCount">0</strong>
+      </div>
+      <div class="stat dept-stat-data-entry">
+        <span>مشاكل Data Entry</span><strong id="dataEntryCount">0</strong>
+      </div>
+      <div class="stat dept-stat-quality">
+        <span>مشاكل Quality</span><strong id="qualityCount">0</strong>
+      </div>
+      <div class="stat dept-stat-marketing">
+        <span>مشاكل Marketing</span><strong id="marketingCount">0</strong>
       </div>
     </div>
 
@@ -903,6 +924,16 @@ body.admin-user .admin-only { display: inline-flex !important; }
         <div class="field full">
           <label>وصف المشكلة بالتفصيل</label>
           <textarea id="teacherDescription"></textarea>
+        </div>
+
+        <div class="field">
+          <label>القسم المسؤول *</label>
+          <select id="teacherDepartment" required>
+            <option value="Operation">Operation</option>
+            <option value="Data Entry">Data Entry</option>
+            <option value="Quality">Quality</option>
+            <option value="Marketing">Marketing</option>
+          </select>
         </div>
 
         <div class="field">
@@ -1226,7 +1257,7 @@ async function loadData() {
   // قراءة ملفات المعلمين المشتركة، مع الاحتفاظ بالبيانات المحلية إذا كان الجدول السحابي فارغًا.
   const { data: remoteTeachers, error: teachersError } = await supabaseClient
     .from("teacher_records")
-    .select("id, name, subject, issue, description, status, photo_path, files, updated_at");
+    .select("id, name, subject, issue, description, department, status, photo_path, files, updated_at");
   if (teachersError) throw teachersError;
 
   if (Array.isArray(remoteTeachers) && remoteTeachers.length) {
@@ -1246,7 +1277,7 @@ async function loadData() {
         }
         return { ...file, path: file.path || "", data: dataUrl };
       }));
-      return { id:String(row.id), name:row.name||"", subject:row.subject||"", issue:row.issue||"", description:row.description||"", status:row.status||"جديدة", photo, photo_path:row.photo_path||"", files };
+      return { id:String(row.id), name:row.name||"", subject:row.subject||"", issue:row.issue||"", description:row.description||"", department:row.department||"غير محدد", status:row.status||"جديدة", photo, photo_path:row.photo_path||"", files };
     }));
   }
 
@@ -1286,7 +1317,7 @@ async function persistTeacherToCloud(teacher) {
     if (!path) throw new Error("تعذر رفع المرفق: " + (file.name || "ملف بدون اسم"));
     cloudFiles.push({ name:file.name||"ملف", type:file.type||"", path });
   }
-  const row = { id:String(teacher.id), name:teacher.name||"", subject:teacher.subject||"", issue:teacher.issue||"", description:teacher.description||"", status:teacher.status||"جديدة", photo_path:photoPath||null, files:cloudFiles, updated_at:new Date().toISOString() };
+  const row = { id:String(teacher.id), name:teacher.name||"", subject:teacher.subject||"", issue:teacher.issue||"", description:teacher.description||"", department:teacher.department||"غير محدد", status:teacher.status||"جديدة", photo_path:photoPath||null, files:cloudFiles, updated_at:new Date().toISOString() };
   const { error } = await supabaseClient.from("teacher_records").upsert(row);
   if (error) throw error;
   teacher.photo_path = photoPath;
@@ -1661,6 +1692,7 @@ async function openTeacherForm(id = "") {
     $("teacherSubject").value = teacher.subject;
     $("teacherIssue").value = teacher.issue;
     $("teacherDescription").value = teacher.description;
+    $("teacherDepartment").value = ["Operation", "Data Entry", "Quality", "Marketing"].includes(teacher.department) ? teacher.department : "Quality";
     $("teacherStatus").value = teacher.status;
     selectedFiles = [...teacher.files];
     photoData = teacher.photo;
@@ -1726,7 +1758,7 @@ $("teacherForm").addEventListener("submit", async event => {
   if (!(await requireAdmin())) return;
   const id = $("teacherId").value || String(Date.now());
   const existing = teachers.find(item => item.id === id);
-  const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
+  const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), department:$("teacherDepartment").value, status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
   const submitButton = $("teacherForm").querySelector('button[type="submit"]');
   if (submitButton) { submitButton.disabled = true; submitButton.textContent = "جارٍ الحفظ..."; }
   try {
@@ -1744,14 +1776,21 @@ $("teacherForm").addEventListener("submit", async event => {
   }
 });
 
+function departmentClass(department) {
+  return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing" })[department] || "";
+}
+
 function renderTeachers() {
   $("teacherCount").textContent = teachers.length;
 
   $("complaintCount").textContent =
     teachers.filter(t => t.status !== "تم الحل").length;
 
-  $("attachmentCount").textContent =
-    teachers.reduce((total, t) => total + (t.files || []).length, 0);
+  const departmentCount = department => teachers.filter(t => t.department === department).length;
+  $("operationCount").textContent = departmentCount("Operation");
+  $("dataEntryCount").textContent = departmentCount("Data Entry");
+  $("qualityCount").textContent = departmentCount("Quality");
+  $("marketingCount").textContent = departmentCount("Marketing");
 
   const query = $("teacherSearch").value.trim().toLocaleLowerCase();
   const status = $("teacherFilter").value;
@@ -1762,7 +1801,7 @@ function renderTeachers() {
 
   $("teacherGrid").innerHTML = visibleTeachers.length
     ? visibleTeachers.map(t => `
-      <article class="teacher">
+      <article class="teacher ${departmentClass(t.department)}">
         <button class="btn delete"
           onclick="deleteTeacher('${t.id}')">حذف</button>
 
@@ -1774,7 +1813,8 @@ function renderTeachers() {
 
         <h3>${escapeHTML(t.name)}</h3>
         <p>${escapeHTML(t.subject || "لم تُحدد المادة")}</p>
-        <span class="status">${escapeHTML(t.status)}</span>
+        <span class="department-badge ${departmentClass(t.department)}">${escapeHTML(t.department || "غير محدد")}</span>
+        <br><span class="status">${escapeHTML(t.status)}</span>
 
         <p>${escapeHTML(t.issue)}</p>
 
@@ -1822,6 +1862,7 @@ function showTeacher(id) {
     <h3>التفاصيل</h3>
     <div class="detail">${escapeHTML(t.description || "لا توجد تفاصيل إضافية.")}</div>
 
+    <p>القسم المسؤول: <strong>${escapeHTML(t.department || "غير محدد")}</strong></p>
     <p>المادة: ${escapeHTML(t.subject || "غير محددة")}</p>
     <p>الحالة: ${escapeHTML(t.status)}</p>
 
