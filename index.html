@@ -774,7 +774,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <section class="password-settings-card" role="dialog" aria-modal="true" aria-labelledby="passwordSettingsTitle">
     <button type="button" class="btn secondary password-settings-close" onclick="closePasswordSettings()">إغلاق ✕</button>
     <h2 id="passwordSettingsTitle">تغيير كلمة المرور</h2>
-    <p class="muted">أدخلي كلمة المرور الحالية ثم اختاري كلمة مرور جديدة.</p>
+    <p class="muted">أدخل كلمة المرور الحالية ثم اختر كلمة مرور جديدة.</p>
     <form id="passwordChangeForm" onsubmit="changeAccountPassword(event)">
       <div class="field"><label for="currentPassword">كلمة المرور الحالية</label><input id="currentPassword" type="password" autocomplete="current-password" required></div>
       <div class="field"><label for="newPassword">كلمة المرور الجديدة</label><input id="newPassword" type="password" autocomplete="new-password" minlength="8" required><small>8 أحرف على الأقل.</small></div>
@@ -839,7 +839,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
     </div>
 
     <h2 id="teacherIssuesHeading">ملفات المعلمين</h2>
-    <p class="muted" id="teacherIssuesHint">اختاري قسمًا من المربعات أعلاه لعرض مشاكله. يمكنك اختيار «كل الأقسام» لعرض كل المشاكل.</p>
+    <p class="muted" id="teacherIssuesHint">اختر قسمًا من المربعات أعلاه لعرض مشاكله. يمكنك اختيار «كل الأقسام» لعرض كل المشاكل.</p>
     <div class="toolbar">
       <input id="teacherSearch" type="search" placeholder="ابحث بالاسم أو الشكوى أو المادة..." aria-label="البحث في ملفات المعلمين">
       <select id="teacherFilter" aria-label="تصفية شكاوى المعلمين حسب الحالة">
@@ -1248,7 +1248,7 @@ async function changeAccountPassword(event) {
     return;
   }
   if (newPassword === currentPassword) {
-    message.textContent = "اختاري كلمة مرور مختلفة عن الحالية.";
+    message.textContent = "اختر كلمة مرور مختلفة عن الحالية.";
     return;
   }
   button.disabled = true;
@@ -1542,7 +1542,7 @@ async function saveData() {
     return true;
   } catch (error) {
     console.error("تعذر حفظ البيانات.", error);
-    alert("تعذر حفظ البيانات. " + (error.message || "راجعي Console لمعرفة السبب."));
+    alert("تعذر حفظ البيانات. " + (error.message || "راجع Console لمعرفة السبب."));
     return false;
   }
 }
@@ -1675,7 +1675,7 @@ async function loadWorkspaceItems() {
       list.innerHTML =
         '<div class="empty">تعذر الاتصال بجدول quality_workspace_items.<br><strong>تفاصيل الخطأ:</strong> ' +
         safeMessage +
-        '<br>افتحي Supabase ثم Table Editor وتأكدي من وجود الجدول، وبعدها راجعي صلاحيات SELECT للمستخدمين المسجلين وصلاحيات INSERT وDELETE لحساب الإدارة.</div>';
+        '<br>افتح Supabase ثم Table Editor وتأكد من وجود الجدول، وبعدها راجع صلاحيات SELECT للمستخدمين المسجلين وصلاحيات INSERT وDELETE لحساب الإدارة.</div>';
     });
   } finally { workspaceLoading = false; }
 }
@@ -1837,7 +1837,7 @@ $("teacherForm").addEventListener("submit", async event => {
   const id = $("teacherId").value || String(Date.now());
   const existing = teachers.find(item => item.id === id);
   const selectedDepartments = [...document.querySelectorAll('input[name="teacherDepartment"]:checked')].map(input => input.value);
-  if (!selectedDepartments.length) { alert("اختاري قسمًا واحدًا على الأقل."); return; }
+  if (!selectedDepartments.length) { alert("اختر قسمًا واحدًا على الأقل."); return; }
   const teacher = { id, name:$("teacherName").value.trim(), subject:$("teacherSubject").value.trim(), issue:$("teacherIssue").value.trim(), description:$("teacherDescription").value.trim(), department:JSON.stringify(selectedDepartments), status:$("teacherStatus").value, photo:photoData, photo_path:existing?.photo_path||"", files:[...selectedFiles] };
   const submitButton = $("teacherForm").querySelector('button[type="submit"]');
   if (submitButton) { submitButton.disabled = true; submitButton.textContent = "جارٍ الحفظ..."; }
@@ -1850,7 +1850,7 @@ $("teacherForm").addEventListener("submit", async event => {
     renderTeachers();
   } catch (error) {
     console.error("تعذر حفظ ملف المعلم في السحابة:", error);
-    alert("لم يتم تأكيد حفظ ملف المعلم في السحابة. البيانات المحلية لم تُحذف. راجعي Console لمعرفة الخطأ.");
+    alert("لم يتم تأكيد حفظ ملف المعلم في السحابة. البيانات المحلية لم تُحذف. راجع Console لمعرفة الخطأ.");
   } finally {
     if (submitButton) { submitButton.disabled = false; submitButton.textContent = "حفظ البيانات"; }
   }
@@ -2055,7 +2055,7 @@ function previewTeacherPdf(id, index) {
 function previewSystemIssueAttachment(id, index) {
   const problem = problems.find(item => item.id === id);
   const file = problem?.attachments?.[index];
-  if (!file || !file.data) { alert("رابط المرفق غير متاح حاليًا. أغلقي التفاصيل وافتحيها مرة أخرى لتجديد الرابط."); return; }
+  if (!file || !file.data) { alert("رابط المرفق غير متاح حاليًا. أغلق التفاصيل وافتحها مرة أخرى لتجديد الرابط."); return; }
   const kind = getAttachmentKind(file);
   if (kind === "image") {
     $("imagePreviewTitle").textContent = file.name || "معاينة الصورة";
@@ -2129,7 +2129,7 @@ const id = $("problemId").value || crypto.randomUUID();
 
   const pickedFiles = Array.from($("problemFiles").files || []);
   const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(file.name));
-  if (allowedFiles.length !== pickedFiles.length) { alert("اختاري صورًا أو ملفات PDF فقط."); return; }
+  if (allowedFiles.length !== pickedFiles.length) { alert("اختر صورًا أو ملفات PDF فقط."); return; }
   if (allowedFiles.some(file => file.size > 15 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 15 ميجابايت."); return; }
   try {
     for (const file of allowedFiles) {
@@ -2139,7 +2139,7 @@ const id = $("problemId").value || crypto.randomUUID();
     }
   } catch (uploadError) {
     console.error("تعذر رفع مرفقات المشكلة:", uploadError);
-    alert("تعذر رفع المرفق. راجعي صلاحيات Storage في Supabase. " + uploadError.message);
+    alert("تعذر رفع المرفق. راجع صلاحيات Storage في Supabase. " + uploadError.message);
     return;
   }
 
@@ -2154,7 +2154,7 @@ const id = $("problemId").value || crypto.randomUUID();
   try {
     const saved = await saveData();
     if (!saved) {
-      alert("لم يتم تأكيد الحفظ في قاعدة البيانات. راجعي رسالة الخطأ، ولا تعتمدي على ظهور البطاقة وحده.");
+      alert("لم يتم تأكيد الحفظ في قاعدة البيانات. راجع رسالة الخطأ، ولا تعتمد على ظهور البطاقة وحده.");
       return;
     }
     closeModal("problemModal");
