@@ -1297,7 +1297,7 @@ async function showAuthenticatedApp() {
     renderTeachers();
     renderProblems();
     const savedPage = localStorage.getItem("quality-department-active-page");
-    switchPage(["system", "teachers", "updates", "ecq", "reports"].includes(savedPage) ? savedPage : "teachers");
+    switchPage(["system", "teachers", "updates", "ecq", "teacherReports", "reports"].includes(savedPage) ? savedPage : "teachers");
     document.body.classList.add("app-ready");
     await loadWorkspaceItems();
   } catch (error) {
