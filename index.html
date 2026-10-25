@@ -790,6 +790,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Suggestions</button>
   <button id="reportsNav" onclick="switchPage('reports')">News & Meetings</button>
   <button id="ecqNav" onclick="switchPage('ecq')">ECQ Man Power Dashboard</button>
+  <button id="teacherReportsNav" onclick="switchPage('teacherReports')">Teacher's Reports Per Lecture</button>
 </nav>
 
 <main>
@@ -934,6 +935,21 @@ body.admin-user .admin-only { display: inline-flex !important; }
     <iframe
       src="https://mohamedeldawy.github.io/ECQ-Man-Power/"
       title="ECQ Man Power Dashboard"
+      loading="lazy"
+      style="display:block;width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--border);border-radius:14px;background:#fff"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </section>
+
+  <section id="teacherReportsPage" class="page workspace-page">
+    <div class="page-header">
+      <div><h1>Teacher's Reports Per Lecture</h1><p class="muted">لوحة تقارير المعلمين لكل محاضرة.</p></div>
+      <a href="https://mohamedeldawy.github.io/Teacher-s-Reports-Dashboard/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
+    </div>
+    <iframe
+      src="https://mohamedeldawy.github.io/Teacher-s-Reports-Dashboard/"
+      title="Teacher's Reports Per Lecture"
       loading="lazy"
       style="display:block;width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--border);border-radius:14px;background:#fff"
       referrerpolicy="strict-origin-when-cross-origin"
@@ -1539,13 +1555,14 @@ function escapeHTML(value = "") {
 }
 
 function switchPage(page) {
-  const allowed = ["teachers", "system", "updates", "ecq", "reports"];
+  const allowed = ["teachers", "system", "updates", "ecq", "teacherReports", "reports"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
   const isIssues = selectedPage === "teachers" || selectedPage === "system";
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
   $("updatesPage").classList.toggle("active", selectedPage === "updates");
   $("ecqPage").classList.toggle("active", selectedPage === "ecq");
+  $("teacherReportsPage").classList.toggle("active", selectedPage === "teacherReports");
   $("reportsPage").classList.toggle("active", selectedPage === "reports");
   $("issuesSubnav").style.display = isIssues ? "flex" : "none";
   $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
@@ -1553,6 +1570,7 @@ function switchPage(page) {
   $("issuesNav").classList.toggle("active", isIssues);
   $("updatesNav").classList.toggle("active", selectedPage === "updates");
   $("ecqNav").classList.toggle("active", selectedPage === "ecq");
+  $("teacherReportsNav").classList.toggle("active", selectedPage === "teacherReports");
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
