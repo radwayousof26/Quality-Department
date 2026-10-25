@@ -385,12 +385,24 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
   z-index: 4;
 }
 
-.navigation button {
+.navigation button,
+.navigation .external-tab {
   border: 0;
   padding: 12px 16px;
   background: transparent;
   color: white;
   border-radius: 10px;
+  font: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+}
+
+.navigation .external-tab:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .navigation button.active {
@@ -777,6 +789,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <button id="updatesNav" onclick="switchPage('updates')">Quality Department Guidelines</button>
   <button id="issuesNav" class="active" onclick="switchPage('teachers')">Issues & Suggestions</button>
   <button id="reportsNav" onclick="switchPage('reports')">News & Meetings</button>
+  <a class="external-tab" href="https://mohamedeldawy.github.io/ECQ-Man-Power/" target="_blank" rel="noopener noreferrer">ECQ Man Power Dashboard ↗</a>
 </nav>
 
 <main>
