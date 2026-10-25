@@ -918,6 +918,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <a href="https://radwayousof26.github.io/Quality-Guidlines/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
     </div>
     <iframe
+      id="qualityGuidelinesFrame"
       src="https://radwayousof26.github.io/Quality-Guidlines/"
       title="لوحة إرشادات الجودة"
       loading="lazy"
@@ -933,6 +934,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <a href="https://mohamedeldawy.github.io/ECQ-Man-Power/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
     </div>
     <iframe
+      id="ecqDashboardFrame"
       src="https://mohamedeldawy.github.io/ECQ-Man-Power/"
       title="ECQ Man Power Dashboard"
       loading="lazy"
@@ -948,6 +950,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <a href="https://mohamedeldawy.github.io/Teacher-s-Reports-Dashboard/" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
     </div>
     <iframe
+      id="teacherReportsFrame"
       src="https://mohamedeldawy.github.io/Teacher-s-Reports-Dashboard/"
       title="Teacher's Reports Per Lecture"
       loading="lazy"
@@ -1554,10 +1557,27 @@ function escapeHTML(value = "") {
   })[char]);
 }
 
+function refreshEmbeddedDashboard(page) {
+  const dashboardUrls = {
+    updates: "https://radwayousof26.github.io/Quality-Guidlines/",
+    ecq: "https://mohamedeldawy.github.io/ECQ-Man-Power/",
+    teacherReports: "https://mohamedeldawy.github.io/Teacher-s-Reports-Dashboard/"
+  };
+  const frameIds = {
+    updates: "qualityGuidelinesFrame",
+    ecq: "ecqDashboardFrame",
+    teacherReports: "teacherReportsFrame"
+  };
+  const url = dashboardUrls[page];
+  const frame = document.getElementById(frameIds[page]);
+  if (url && frame) frame.src = url + "?refresh=" + Date.now();
+}
+
 function switchPage(page) {
   const allowed = ["teachers", "system", "updates", "ecq", "teacherReports", "reports"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
   const isIssues = selectedPage === "teachers" || selectedPage === "system";
+  if (["updates", "ecq", "teacherReports"].includes(selectedPage)) refreshEmbeddedDashboard(selectedPage);
   $("teachersPage").classList.toggle("active", selectedPage === "teachers");
   $("systemPage").classList.toggle("active", selectedPage === "system");
   $("updatesPage").classList.toggle("active", selectedPage === "updates");
