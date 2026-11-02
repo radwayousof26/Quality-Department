@@ -327,6 +327,7 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .problem-grid .problem .impact.impact-high { background: #dc3838; color: white; }
 .problem-grid .problem .impact.impact-medium { background: #f2c900; color: #202431; }
 .problem-grid .problem .impact.impact-low { background: #29a36a; color: white; }
+.problem-grid .problem .impact.is-resolved { background: #16a34a !important; color: white !important; }
 .problem-grid .problem .impact-icon {
   position: relative;
   width: 8px;
@@ -2185,7 +2186,7 @@ function renderProblems() {
   $("problemGrid").innerHTML = visibleProblems.length
     ? visibleProblems.map(p => `
       <button class="problem" aria-label="${escapeHTML(p.title)} — مستوى التأثير ${escapeHTML(p.impact)}، اضغط لعرض التفاصيل" onclick="showProblem('${p.id}')">
-        <span class="impact impact-${p.impact === "عالٍ" ? "high" : p.impact === "متوسط" ? "medium" : "low"}" aria-label="مستوى التأثير ${escapeHTML(p.impact)}" title="التأثير ${escapeHTML(p.impact)}">
+        <span class="impact impact-${p.impact === "عالٍ" ? "high" : p.impact === "متوسط" ? "medium" : "low"} ${p.status === "تم الحل" ? "is-resolved" : ""}" aria-label="${p.status === "تم الحل" ? "تم الحل" : "مستوى التأثير " + escapeHTML(p.impact)}" title="${p.status === "تم الحل" ? "تم الحل" : "التأثير " + escapeHTML(p.impact)}">
           <span class="impact-icon" aria-hidden="true"></span>
         </span>
         <h3>${escapeHTML(p.title)}</h3>
