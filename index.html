@@ -2164,7 +2164,6 @@ $("problemForm").addEventListener("submit", async event => {
 const id = $("problemId").value || crypto.randomUUID();
   const existing = problems.find(item => item.id === id);
   const selectedDepartments = [...document.querySelectorAll('input[name="problemDepartment"]:checked')].map(input => input.value);
-  if (!selectedDepartments.length) { alert("اختر قسمًا واحدًا على الأقل."); return; }
 
   const problem = {
     id,
@@ -2260,7 +2259,7 @@ function renderProblems() {
           <span class="impact-icon" aria-hidden="true"></span>
         </span>
         <h3>${escapeHTML(p.title)}</h3>
-        <div>${problemDepartments(p.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">غير محدد</span>`}</div>
+        <div>${problemDepartments(p.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">عامة</span>`}</div>
       </button>
     `).join("")
     : `<div class="empty">${problems.length ? "لا توجد نتائج مطابقة للتصفية." : "لا توجد مشاكل سيستم مسجلة حتى الآن."}</div>`;
@@ -2300,7 +2299,7 @@ function showProblem(id) {
   $("detailBody").innerHTML = `
     <p>مستوى التأثير: ${escapeHTML(p.impact)}</p>
     <p>الحالة: ${escapeHTML(p.status)}</p>
-    <p>الأقسام المسؤولة: <strong>${problemDepartments(p.department).map(escapeHTML).join("، ") || "غير محدد"}</strong></p>
+    <p>الأقسام المسؤولة: <strong>${problemDepartments(p.department).map(escapeHTML).join("، ") || "عامة"}</strong></p>
 
     <h3>وصف المشكلة</h3>
     <div class="detail">${escapeHTML(p.description)}</div>
