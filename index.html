@@ -1094,6 +1094,16 @@ body.admin-user .admin-only { display: inline-flex !important; }
         </div>
 
         <div class="field full">
+          <label>الأقسام المسؤولة * (يمكن اختيار أكثر من قسم)</label>
+          <div id="problemDepartmentChoices" class="department-choices">
+            <label><input type="checkbox" name="problemDepartment" value="Operation"> Operation</label>
+            <label><input type="checkbox" name="problemDepartment" value="Data Entry"> Data Entry</label>
+            <label><input type="checkbox" name="problemDepartment" value="Quality"> Quality</label>
+            <label><input type="checkbox" name="problemDepartment" value="Marketing"> Marketing</label>
+          </div>
+        </div>
+
+        <div class="field full">
           <label>وصف المشكلة *</label>
           <textarea id="problemDescription" required></textarea>
         </div>
@@ -1395,7 +1405,7 @@ async function loadData() {
   // بيانات مشاكل ومقترحات المشتركة تُحمّل من Supabase لكل حساب.
   const { data: remoteProblems, error } = await supabaseClient
     .from("system_issues")
-    .select("id, title, impact, status, description, action, attachments");
+    .select("id, title, impact, status, description, action, department, attachments");
 
   if (error) {
     console.error("تعذر تحميل مشاكل ومقترحات من Supabase:", error.message);
@@ -1412,6 +1422,7 @@ async function loadData() {
     status: row.status || "جديدة",
     description: row.description || "",
     action: row.action || "",
+    department: problemDepartments(row.department),
     attachments: Array.isArray(row.attachments) ? await Promise.all(row.attachments.map(async file => {
       if (!file.path) return file;
       const { data } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
@@ -1506,6 +1517,7 @@ async function syncProblemsToSupabase() {
     status: p.status,
     description: p.description,
     action: p.action,
+    department: problemDepartments(p.department),
     attachments: (Array.isArray(p.attachments) ? p.attachments : []).map(file => ({ name: file.name || "مرفق", type: file.type || "", path: file.path || "" }))
   }));
 
@@ -2089,6 +2101,24 @@ function downloadFile(id, index) {
 
 /* إدارة مشاكل ومقترحات */
 
+function problemDepartments(value) {
+  const allowed = ["Operation", "Data Entry", "Quality", "Marketing"];
+  if (Array.isArray(value)) return value.filter(department => allowed.includes(department));
+  if (!value) return [];
+  if (allowed.includes(value)) return [value];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(department => allowed.includes(department)) : [];
+  } catch (_) { return []; }
+}
+
+function setProblemDepartments(value) {
+  const selected = problemDepartments(value);
+  document.querySelectorAll('input[name="problemDepartment"]').forEach(input => {
+    input.checked = selected.includes(input.value);
+  });
+}
+
 async function openProblemForm(id = "") {
   if (!(await requireAdmin())) return;
   $("problemForm").reset();
@@ -2102,8 +2132,10 @@ async function openProblemForm(id = "") {
     $("problemStatus").value = problem.status;
     $("problemDescription").value = problem.description;
     $("problemAction").value = problem.action;
+    setProblemDepartments(problem.department);
     $("problemExistingFiles").innerHTML = (problem.attachments || []).map(file => `<div class="attachment"><a href="${escapeHTML(file.data || "")}" target="_blank" rel="noopener">${escapeHTML(file.name || "مرفق")}</a></div>`).join("");
   } else {
+    setProblemDepartments([]);
     $("problemExistingFiles").innerHTML = "";
   }
 
@@ -2119,6 +2151,8 @@ $("problemForm").addEventListener("submit", async event => {
 
 const id = $("problemId").value || crypto.randomUUID();
   const existing = problems.find(item => item.id === id);
+  const selectedDepartments = [...document.querySelectorAll('input[name="problemDepartment"]:checked')].map(input => input.value);
+  if (!selectedDepartments.length) { alert("اختر قسمًا واحدًا على الأقل."); return; }
 
   const problem = {
     id,
@@ -2127,6 +2161,7 @@ const id = $("problemId").value || crypto.randomUUID();
     status: $("problemStatus").value,
     description: $("problemDescription").value.trim(),
     action: $("problemAction").value.trim(),
+    department: selectedDepartments,
     attachments: existing && Array.isArray(existing.attachments) ? [...existing.attachments] : []
   };
 
@@ -2206,6 +2241,7 @@ function showProblem(id) {
   $("detailBody").innerHTML = `
     <p>مستوى التأثير: ${escapeHTML(p.impact)}</p>
     <p>الحالة: ${escapeHTML(p.status)}</p>
+    <p>الأقسام المسؤولة: <strong>${problemDepartments(p.department).map(escapeHTML).join("، ") || "غير محدد"}</strong></p>
 
     <h3>وصف المشكلة</h3>
     <div class="detail">${escapeHTML(p.description)}</div>
