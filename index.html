@@ -238,6 +238,7 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .problem.dept-data-entry { border: 2px solid #3985e8; border-right: 6px solid #3985e8; background: #f4f8ff; }
 .problem.dept-quality { border: 2px solid #239b63; border-right: 6px solid #239b63; background: #f2fff7; }
 .problem.dept-marketing { border: 2px solid #9854bd; border-right: 6px solid #9854bd; background: #fcf5ff; }
+.problem.dept-tech { border: 2px solid #0f8b8d; border-right: 6px solid #0f8b8d; background: #f0ffff; }
 .department-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
 .department-choices label { display: flex; align-items: center; gap: 7px; padding: 9px; border: 1px solid var(--border); border-radius: 9px; background: white; }
 .department-choices input { width: auto; }
@@ -246,10 +247,12 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .department-badge.dept-data-entry { background: #dceaff; color: #1554a5; }
 .department-badge.dept-quality { background: #d9f6e5; color: #126b40; }
 .department-badge.dept-marketing { background: #f0dcff; color: #70349a; }
+.department-badge.dept-tech { background: #d4f3f2; color: #08696b; }
 .stat.dept-stat-operation { border-top: 4px solid #e0b400; }
 .stat.dept-stat-data-entry { border-top: 4px solid #3985e8; }
 .stat.dept-stat-quality { border-top: 4px solid #239b63; }
 .stat.dept-stat-marketing { border-top: 4px solid #9854bd; }
+.stat.dept-stat-tech { border-top: 4px solid #0f8b8d; }
 
 .status {
   display: inline-block;
@@ -887,6 +890,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <button type="button" class="stat dept-stat-data-entry department-filter" data-department="Data Entry" onclick="selectProblemDepartment('Data Entry')" aria-pressed="false"><span>مشاكل Data Entry</span><strong id="problemDataEntryCount">0</strong></button>
       <button type="button" class="stat dept-stat-quality department-filter" data-department="Quality" onclick="selectProblemDepartment('Quality')" aria-pressed="false"><span>مشاكل Quality</span><strong id="problemQualityCount">0</strong></button>
       <button type="button" class="stat dept-stat-marketing department-filter" data-department="Marketing" onclick="selectProblemDepartment('Marketing')" aria-pressed="false"><span>مشاكل Marketing</span><strong id="problemMarketingCount">0</strong></button>
+       <button type="button" class="stat dept-stat-tech department-filter" data-department="Tech" onclick="selectProblemDepartment('Tech')" aria-pressed="false"><span>مشاكل Tech</span><strong id="problemTechCount">0</strong></button>
       <button type="button" class="stat department-filter" data-department="all" onclick="selectProblemDepartment('all')" aria-pressed="false"><span>كل الأقسام</span><strong id="problemAllDepartmentCount">0</strong></button>
     </div>
 
@@ -1111,6 +1115,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
             <label><input type="checkbox" name="problemDepartment" value="Data Entry"> Data Entry</label>
             <label><input type="checkbox" name="problemDepartment" value="Quality"> Quality</label>
             <label><input type="checkbox" name="problemDepartment" value="Marketing"> Marketing</label>
+             <label><input type="checkbox" name="problemDepartment" value="Tech"> Tech (Technical)</label>
           </div>
         </div>
 
@@ -1900,7 +1905,7 @@ function setTeacherDepartments(value) {
 }
 
 function departmentClass(department) {
-  return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing" })[department] || "";
+  return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing", "Tech": "dept-tech" })[department] || "";
 }
 
 let selectedTeacherDepartment = "all";
@@ -2114,7 +2119,7 @@ function downloadFile(id, index) {
 /* إدارة مشاكل ومقترحات */
 
 function problemDepartments(value) {
-  const allowed = ["Operation", "Data Entry", "Quality", "Marketing"];
+  const allowed = ["Operation", "Data Entry", "Quality", "Marketing", "Tech"];
   if (Array.isArray(value)) return value.filter(department => allowed.includes(department));
   if (!value) return [];
   if (allowed.includes(value)) return [value];
@@ -2220,7 +2225,7 @@ function selectProblemDepartment(department) {
     button.classList.toggle("selected", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
-  const names = { "Operation": "Operation", "Data Entry": "Data Entry", "Quality": "Quality", "Marketing": "Marketing", "all": "كل الأقسام" };
+  const names = { "Operation": "Operation", "Data Entry": "Data Entry", "Quality": "Quality", "Marketing": "Marketing", "Tech": "Tech", "all": "كل الأقسام" };
   $("problemIssuesHeading").textContent = department === "all" ? "مشاكل كل الأقسام" : "مشاكل قسم " + names[department];
   $("problemIssuesHint").textContent = department === "all" ? "يعرض هذا القسم كل مشاكل ومقترحات الأقسام." : "يعرض هذا القسم المشكلات المسجلة تحت " + names[department] + " فقط.";
   renderProblems();
@@ -2239,6 +2244,7 @@ function renderProblems() {
   $("problemDataEntryCount").textContent = departmentCount("Data Entry");
   $("problemQualityCount").textContent = departmentCount("Quality");
   $("problemMarketingCount").textContent = departmentCount("Marketing");
+  $("problemTechCount").textContent = departmentCount("Tech");
   $("problemAllDepartmentCount").textContent = problems.length;
 
   const query = $("problemSearch").value.trim().toLocaleLowerCase();
