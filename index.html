@@ -356,16 +356,25 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 }
 .problem-grid .problem h3 {
   width: 100%;
+  min-height: 50px;
   margin: 0;
-  padding: 5px 8px;
+  padding: 6px 8px;
   border: 1px solid #343434;
   border-radius: 7px;
   background: white;
   color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   text-align: center;
   font-size: 15px;
   line-height: 1.4;
 }
+.problem-grid .problem .problem-title-text { display: block; width: 100%; overflow-wrap: anywhere; }
+.problem-grid .problem .problem-departments { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 3px; width: 100%; }
+.problem-grid .problem .department-badge { margin: 0; padding: 2px 8px; font-size: 11px; line-height: 1.5; }
 
 .empty {
   grid-column: 1 / -1;
@@ -2263,8 +2272,10 @@ function renderProblems() {
         <span class="impact impact-${p.impact === "عالٍ" ? "high" : p.impact === "متوسط" ? "medium" : "low"} ${p.status === "تم الحل" ? "is-resolved" : p.status === "تم الرفض" ? "is-rejected" : ""}" aria-label="${p.status === "تم الحل" ? "تم الحل" : p.status === "تم الرفض" ? "تم الرفض" : "مستوى التأثير " + escapeHTML(p.impact)}" title="${p.status === "تم الحل" ? "تم الحل" : p.status === "تم الرفض" ? "تم الرفض" : "التأثير " + escapeHTML(p.impact)}">
           <span class="impact-icon" aria-hidden="true"></span>
         </span>
-        <h3>${escapeHTML(p.title)}</h3>
-        <div>${problemDepartments(p.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">عامة</span>`}</div>
+        <h3>
+          <span class="problem-title-text">${escapeHTML(p.title)}</span>
+          <span class="problem-departments">${problemDepartments(p.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">عامة</span>`}</span>
+        </h3>
       </button>
     `).join("")
     : `<div class="empty">${problems.length ? "لا توجد نتائج مطابقة للتصفية." : "لا توجد مشاكل سيستم مسجلة حتى الآن."}</div>`;
