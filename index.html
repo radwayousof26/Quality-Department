@@ -373,8 +373,30 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
   line-height: 1.4;
 }
 .problem-grid .problem .problem-title-text { display: block; width: 100%; overflow-wrap: anywhere; }
-.problem-grid .problem .problem-departments { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 3px; width: 100%; }
-.problem-grid .problem .department-badge { margin: 0; padding: 2px 8px; font-size: 11px; line-height: 1.5; }
+.problem-grid .problem .problem-team-ribbon {
+  position: absolute;
+  top: 13px;
+  right: 5px;
+  z-index: 2;
+  max-width: 112px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  transform: rotate(35deg);
+  transform-origin: center;
+  box-shadow: 0 2px 4px #17171718;
+}
+.problem-grid .problem .problem-team-ribbon.dept-operation { background: #fff0a8; color: #725b00; }
+.problem-grid .problem .problem-team-ribbon.dept-data-entry { background: #dceaff; color: #1554a5; }
+.problem-grid .problem .problem-team-ribbon.dept-quality { background: #d9f6e5; color: #126b40; }
+.problem-grid .problem .problem-team-ribbon.dept-marketing { background: #f0dcff; color: #70349a; }
+.problem-grid .problem .problem-team-ribbon.dept-tech { background: #d4f3f2; color: #08696b; }
+.problem-grid .problem .problem-team-ribbon.dept-general { background: #eeeeee; color: #555555; }
 
 .empty {
   grid-column: 1 / -1;
@@ -2273,8 +2295,8 @@ function renderProblems() {
           <span class="impact-icon" aria-hidden="true"></span>
         </span>
         <h3>
+          <span class="problem-team-ribbon ${problemDepartments(p.department).length ? departmentClass(problemDepartments(p.department)[0]) : "dept-general"}">${escapeHTML(problemDepartments(p.department).join(" / ") || "عامة")}</span>
           <span class="problem-title-text">${escapeHTML(p.title)}</span>
-          <span class="problem-departments">${problemDepartments(p.department).map(department => `<span class="department-badge ${departmentClass(department)}">${escapeHTML(department)}</span>`).join(" ") || `<span class="department-badge">عامة</span>`}</span>
         </h3>
       </button>
     `).join("")
