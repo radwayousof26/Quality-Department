@@ -465,6 +465,14 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .workspace-card .workspace-detail { border-top:1px solid var(--border); padding-top:10px; margin-top:10px; white-space:pre-wrap; }
 .workspace-card .workspace-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
 .workspace-card .workspace-actions button { padding:7px 10px; }
+.workspace-attachments { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:14px; }
+.workspace-attachment { min-width:0; padding:10px; border:1px solid var(--border); border-radius:12px; background:#fbfaf6; }
+.workspace-attachment img, .workspace-attachment video { display:block; width:100%; max-height:260px; object-fit:contain; border-radius:8px; background:#171717; }
+.workspace-attachment iframe { display:block; width:100%; height:280px; border:1px solid var(--border); border-radius:8px; background:white; }
+.workspace-attachment a { display:inline-block; margin-top:8px; color:#1554a5; font-weight:bold; }
+.workspace-file-preview { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+.workspace-file-preview img, .workspace-file-preview video { max-width:100%; max-height:220px; border-radius:10px; background:#171717; }
+.workspace-file-preview iframe { width:100%; height:260px; border:1px solid var(--border); border-radius:10px; }
 .navigation { max-width:calc(100vw - 20px); }
 .navigation button { white-space:nowrap; }
 @media (max-width:650px) { .navigation { width:calc(100vw - 16px); justify-content:center; } .navigation button { flex:1 1 auto; font-size:11px; padding:9px 10px; } }
@@ -1019,6 +1027,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <div class="field full"><label>الملخص</label><textarea id="reportsContent"></textarea></div>
       <div class="field full"><label>القرارات</label><textarea id="reportsDecisions"></textarea></div>
       <div class="field full"><label>المتابعات والإجراءات المطلوبة</label><textarea id="reportsFollowUp"></textarea></div>
+      <div class="field full"><label>مرفقات الاجتماع (صور / فيديو / PDF)</label><div class="upload"><p>يمكنك إضافة أكثر من صورة أو فيديو أو ملف PDF، وستظهر معاينة قبل الحفظ.</p><input id="reportsFiles" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple><div id="reportsFilesPreview" class="workspace-file-preview"></div></div></div>
     </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('reports')">إلغاء</button></div></form></div>
     <div id="reportsList" class="workspace-list"></div>
   </section>
@@ -1679,16 +1688,22 @@ function closeWorkspaceForm(type) {
   if (panel) { panel.hidden = true; panel.querySelector("form").reset(); }
 }
 function workspaceField(type, field) { return $(type + field).value.trim(); }
-function renderWorkspaceItems(type) {
+async function workspaceAttachmentUrl(file) {
+  if (file.url) return file.url;
+  if (!file.path) return "";
+  const { data, error } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
+  if (error) { console.warn("تعذر إنشاء رابط معاينة المرفق:", error.message); return ""; }
+  return data?.signedUrl || "";
+}
+async function renderWorkspaceItems(type) {
   const list = $(type + "List");
-  // بعض أقسام مساحة العمل قد تكون مخفية أو محذوفة من الواجهة؛ لا تحاول الرسم في عنصر غير موجود.
   if (!list) return;
   const items = workspaceItems.filter(item => item.category === type);
   if (!items.length) {
     list.innerHTML = '<div class="empty">لا توجد بيانات حتى الآن في هذا القسم.</div>';
     return;
   }
-  list.innerHTML = items.map(item => {
+  const cards = await Promise.all(items.map(async item => {
     const title = escapeHTML(item.title || "");
     const date = escapeHTML(item.event_date || "");
     const status = escapeHTML(item.status || "");
@@ -1708,17 +1723,29 @@ function renderWorkspaceItems(type) {
       decisions ? '<div class="workspace-detail"><strong>القرارات</strong><br>' + decisions + '</div>' : '',
       followUp ? '<div class="workspace-detail"><strong>المتابعات</strong><br>' + followUp + '</div>' : ''
     ].join("");
+    const files = Array.isArray(item.attachments) ? item.attachments : [];
+    const attachmentHtml = files.length ? '<div class="workspace-attachments">' + (await Promise.all(files.map(async file => {
+      const url = await workspaceAttachmentUrl(file);
+      if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذرت المعاينة. تحققي من صلاحيات Storage.</p></div>';
+      const name = escapeHTML(file.name || "مرفق");
+      const typeName = String(file.type || "").toLowerCase();
+      const preview = typeName.startsWith("image/") ? '<img src="' + url + '" alt="' + name + '" loading="lazy">' :
+        typeName.startsWith("video/") ? '<video src="' + url + '" controls preload="metadata"></video>' :
+        (typeName === "application/pdf" || /\.pdf$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' : '';
+      return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a></div>';
+    }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
-      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(\'' + item.id + '\')">حذف</button></div>' : '';
-    return '<article class="workspace-card"><h3>' + title + '</h3>' + details + removeButton + '</article>';
-  }).join("");
+      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(\\'' + item.id + '\\')">حذف</button></div>' : '';
+    return '<article class="workspace-card"><h3>' + title + '</h3>' + details + attachmentHtml + removeButton + '</article>';
+  }));
+  list.innerHTML = cards.join("");
 }
 async function loadWorkspaceItems() {
   if (workspaceLoading) return;
   workspaceLoading = true;
   try {
     const { data, error } = await supabaseClient.from("quality_workspace_items")
-      .select("id, category, title, content, event_date, priority, responsible, status, kind, decisions, follow_up, created_at")
+      .select("id, category, title, content, event_date, priority, responsible, status, kind, decisions, follow_up, attachments, created_at")
       .order("event_date", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -1756,21 +1783,46 @@ async function saveWorkspaceItem(event, type) {
     follow_up: type === "reports" ? workspaceField(type, "FollowUp") : ""
   };
   try {
-    const { error } = await supabaseClient.from("quality_workspace_items").insert(payload);
-    if (error) throw error;
+    const pickedFiles = type === "reports" ? Array.from($("reportsFiles")?.files || []) : [];
+    const validFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/") || file.type === "application/pdf" || /\\.pdf$/i.test(file.name));
+    if (validFiles.length !== pickedFiles.length) throw new Error("المسموح به الصور والفيديو وملفات PDF فقط.");
+    if (validFiles.some(file => file.size > 50 * 1024 * 1024)) throw new Error("حجم كل مرفق يجب ألا يتجاوز 50 ميجابايت.");
+    const itemId = crypto.randomUUID();
+    const attachments = [];
+    for (const file of validFiles) {
+      const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
+      const path = "workspace/reports/" + itemId + "/" + crypto.randomUUID() + "-" + safeName;
+      const contentType = /\\.pdf$/i.test(file.name) ? "application/pdf" : (file.type || "application/octet-stream");
+      const { error: uploadError } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType, upsert: false });
+      if (uploadError) throw uploadError;
+      attachments.push({ name: file.name, type: contentType, path });
+    }
+    const { error } = await supabaseClient.from("quality_workspace_items").insert({ ...payload, id: itemId, attachments });
+    if (error) {
+      if (attachments.length) await supabaseClient.storage.from("quality-files").remove(attachments.map(file => file.path));
+      throw error;
+    }
     event.target.reset();
+    const preview = $("reportsFilesPreview");
+    if (preview) preview.innerHTML = "";
     closeWorkspaceForm(type);
     await loadWorkspaceItems();
-    alert("تم حفظ البيانات بنجاح.");
+    alert("تم حفظ البيانات والمرفقات بنجاح.");
   } catch (error) {
     console.error("تعذر حفظ بيانات القسم:", error);
-    alert("تعذر الحفظ في قاعدة البيانات: " + (error.message || "تحققي من إعدادات الجدول والصلاحيات."));
+    alert("تعذر الحفظ أو رفع المرفق: " + (error.message || "تحققي من إعدادات الجدول وصلاحيات Storage."));
   }
 }
 async function deleteWorkspaceItem(id) {
   if (!(await requireAdmin())) return;
   if (!confirm("هل تريدين حذف هذا السجل نهائيًا؟")) return;
   try {
+    const item = workspaceItems.find(entry => entry.id === id);
+    const storedFiles = Array.isArray(item?.attachments) ? item.attachments : [];
+    if (storedFiles.length) {
+      const { error: storageError } = await supabaseClient.storage.from("quality-files").remove(storedFiles.map(file => file.path).filter(Boolean));
+      if (storageError) throw storageError;
+    }
     const { error } = await supabaseClient.from("quality_workspace_items").delete().eq("id", id);
     if (error) throw error;
     workspaceItems = workspaceItems.filter(item => item.id !== id);
@@ -1780,6 +1832,34 @@ async function deleteWorkspaceItem(id) {
     alert("تعذر الحذف من قاعدة البيانات: " + (error.message || ""));
   }
 }
+
+const reportsFilesInput = $("reportsFiles");
+if (reportsFilesInput) reportsFilesInput.addEventListener("change", event => {
+  const preview = $("reportsFilesPreview");
+  if (!preview) return;
+  const files = Array.from(event.target.files || []);
+  if (files.some(file => file.size > 50 * 1024 * 1024)) {
+    alert("حجم كل مرفق يجب ألا يتجاوز 50 ميجابايت.");
+    event.target.value = "";
+    preview.innerHTML = "";
+    return;
+  }
+  preview.innerHTML = "";
+  files.forEach(file => {
+    const url = URL.createObjectURL(file);
+    const wrapper = document.createElement("div");
+    wrapper.className = "attachment";
+    const label = document.createElement("strong");
+    label.textContent = file.name;
+    wrapper.appendChild(label);
+    let media;
+    if (file.type.startsWith("image/")) { media = document.createElement("img"); media.style.maxWidth = "100%"; media.style.maxHeight = "220px"; }
+    else if (file.type.startsWith("video/")) { media = document.createElement("video"); media.controls = true; media.style.maxWidth = "100%"; media.style.maxHeight = "220px"; }
+    else if (file.type === "application/pdf" || /\\.pdf$/i.test(file.name)) { media = document.createElement("iframe"); media.style.width = "100%"; media.style.height = "220px"; }
+    if (media) { media.src = url; wrapper.appendChild(media); }
+    preview.appendChild(wrapper);
+  });
+});
 
 function openModal(id) {
   $(id).classList.add("show");
