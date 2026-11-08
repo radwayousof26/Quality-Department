@@ -1735,7 +1735,7 @@ async function renderWorkspaceItems(type) {
       return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a></div>';
     }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
-      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(\\'' + item.id + '\\')">حذف</button></div>' : '';
+      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(&quot;' + item.id + '&quot;)">حذف</button></div>' : '';
     return '<article class="workspace-card"><h3>' + title + '</h3>' + details + attachmentHtml + removeButton + '</article>';
   }));
   list.innerHTML = cards.join("");
