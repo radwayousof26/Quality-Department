@@ -1761,7 +1761,9 @@ async function renderWorkspaceItems(type) {
       const preview = typeName.startsWith("image/") ? '<img src="' + url + '" alt="' + name + '" loading="lazy">' :
         typeName.startsWith("video/") ? '<video src="' + url + '" controls preload="metadata"></video>' :
         (typeName === "application/pdf" || /\.pdf$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' : (typeName === "text/html" || /\.html?$/i.test(file.name || "")) ? '<iframe class="html-preview" src="' + url + '" title="' + name + '" sandbox="allow-scripts" loading="lazy"></iframe>' : '';
-      return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a></div>';
+      const removeFileButton = type === "reports" && document.body.classList.contains("admin-user")
+        ? '<button type="button" class="btn delete" style="margin-top:8px" onclick="removeWorkspaceAttachment(&quot;' + item.id + '&quot;,' + files.indexOf(file) + ')">حذف المرفق</button>' : '';
+      return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a>' + removeFileButton + '</div>';
     }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
       ? '<div class="workspace-actions">' + (type === "reports" ? '<button class="btn secondary" onclick="editWorkspaceItem(&quot;' + item.id + '&quot;)">تعديل</button>' : '') + '<button class="btn delete" onclick="deleteWorkspaceItem(&quot;' + item.id + '&quot;)">حذف</button></div>' : '';
@@ -1853,6 +1855,33 @@ async function saveWorkspaceItem(event, type) {
   } catch (error) {
     console.error("تعذر حفظ بيانات القسم:", error);
     alert("تعذر الحفظ أو رفع المرفق: " + (error.message || "تحققي من إعدادات الجدول وصلاحيات Storage."));
+  }
+}
+async function removeWorkspaceAttachment(id, attachmentIndex) {
+  if (!(await requireAdmin())) return;
+  const item = workspaceItems.find(entry => entry.id === id && entry.category === "reports");
+  if (!item || !Array.isArray(item.attachments) || !Number.isInteger(attachmentIndex) || attachmentIndex < 0 || attachmentIndex >= item.attachments.length) {
+    alert("تعذر العثور على المرفق المطلوب.");
+    return;
+  }
+  const attachment = item.attachments[attachmentIndex];
+  if (!confirm('هل تريدين حذف المرفق "' + (attachment.name || "مرفق") + '"؟')) return;
+  const updatedAttachments = item.attachments.filter((file, index) => index !== attachmentIndex);
+  try {
+    const { data, error } = await supabaseClient.from("quality_workspace_items")
+      .update({ attachments: updatedAttachments }).eq("id", id).select("id").maybeSingle();
+    if (error) throw error;
+    if (!data?.id) throw new Error("لم يتم تحديث السجل. تحققي من صلاحية UPDATE في Supabase.");
+    workspaceItems = workspaceItems.map(entry => entry.id === id ? { ...entry, attachments: updatedAttachments } : entry);
+    if (attachment.path) {
+      const { error: storageError } = await supabaseClient.storage.from("quality-files").remove([attachment.path]);
+      if (storageError) console.warn("تم فصل المرفق من السجل لكن تعذر حذف الملف من Storage:", storageError.message);
+    }
+    await renderWorkspaceItems("reports");
+    alert("تم حذف المرفق بنجاح.");
+  } catch (error) {
+    console.error("تعذر حذف مرفق الاجتماع:", error);
+    alert("تعذر حذف المرفق: " + (error.message || "تحققي من صلاحيات Supabase."));
   }
 }
 async function editWorkspaceItem(id) {
