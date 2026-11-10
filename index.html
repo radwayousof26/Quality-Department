@@ -1737,11 +1737,28 @@ async function openWorkspaceHtmlAttachment(encodedUrl) {
   }
 }
 async function workspaceAttachmentUrl(file) {
-  if (file.url) return file.url;
-  if (!file.path) return "";
-  const { data, error } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
-  if (error) { console.warn("تعذر إنشاء رابط معاينة المرفق:", error.message); return ""; }
-  return data?.signedUrl || "";
+  // Prefer the stored object path over any old signed/download URL saved in the record.
+  if (file.path) {
+    const bucket = supabaseClient.storage.from("quality-files");
+    const isHtmlFile = String(file.type || "").toLowerCase() === "text/html" || /\\.html?($|[?#])/i.test(file.name || "");
+    if (isHtmlFile) {
+      // Download through supabase-js, then force the browser to interpret the bytes as HTML.
+      const { data, error } = await bucket.download(file.path);
+      if (error) {
+        console.warn("تعذر تنزيل ملف HTML من Storage:", error.message, error);
+        return "";
+      }
+      const htmlText = await data.text();
+      return URL.createObjectURL(new Blob([htmlText], { type: "text/html;charset=utf-8" }));
+    }
+    const { data, error } = await bucket.createSignedUrl(file.path, 3600, { download: false });
+    if (error) {
+      console.warn("تعذر إنشاء رابط معاينة المرفق من Storage:", error.message, error);
+      return "";
+    }
+    return data?.signedUrl || "";
+  }
+  return file.url || "";
 }
 async function renderWorkspaceItems(type) {
   const list = $(type + "List");
@@ -1774,7 +1791,7 @@ async function renderWorkspaceItems(type) {
     const files = Array.isArray(item.attachments) ? item.attachments : [];
     const attachmentHtml = files.length ? '<div class="workspace-attachments">' + (await Promise.all(files.map(async file => {
       const url = await workspaceAttachmentUrl(file);
-      if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذرت المعاينة. تحقق من صلاحيات Storage.</p></div>';
+      if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذر تحميل المرفق من Storage. راجع صلاحية القراءة (SELECT) في سياسات Storage.</p></div>';
       const name = escapeHTML(file.name || "مرفق");
       const typeName = String(file.type || "").toLowerCase();
       const isHtml = typeName === "text/html" || /\.html?($|[?#])/i.test(file.name || "") || (file.url && /\.html?($|[?#])/i.test(file.url));
