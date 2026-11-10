@@ -1717,6 +1717,25 @@ function closeWorkspaceForm(type) {
   }
 }
 function workspaceField(type, field) { return $(type + field).value.trim(); }
+async function openWorkspaceHtmlAttachment(encodedUrl) {
+  const target = window.open("about:blank", "_blank");
+  if (!target) {
+    alert("اسمح بفتح النوافذ المنبثقة لهذا الموقع ثم حاول مرة أخرى.");
+    return;
+  }
+  try {
+    const url = decodeURIComponent(encodedUrl);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const html = await response.text();
+    const blobUrl = URL.createObjectURL(new Blob([html], { type: "text/html;charset=utf-8" }));
+    target.location.href = blobUrl;
+  } catch (error) {
+    target.close();
+    console.error("تعذر فتح ملف HTML كصفحة:", error);
+    alert("تعذر فتح صفحة HTML. تحقق من صلاحية رابط المرفق أو إعدادات CORS في Storage.");
+  }
+}
 async function workspaceAttachmentUrl(file) {
   if (file.url) return file.url;
   if (!file.path) return "";
@@ -1765,7 +1784,10 @@ async function renderWorkspaceItems(type) {
         isHtml ? '<iframe class="html-preview" data-html-src="' + escapeHTML(url) + '" title="' + name + '" sandbox="allow-scripts allow-forms allow-popups" loading="lazy"></iframe>' : '';
       const removeFileButton = type === "reports" && document.body.classList.contains("admin-user")
         ? '<button type="button" class="btn delete" style="margin-top:8px" onclick="removeWorkspaceAttachment(&quot;' + item.id + '&quot;,' + files.indexOf(file) + ')">حذف المرفق</button>' : '';
-      return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a>' + removeFileButton + '</div>';
+      const openLink = isHtml
+        ? '<a href="#" onclick="openWorkspaceHtmlAttachment(&quot;' + encodeURIComponent(url) + '&quot;); return false;">فتح صفحة HTML: ' + name + '</a>'
+        : '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a>';
+      return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + openLink + removeFileButton + '</div>';
     }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
       ? '<div class="workspace-actions">' + (type === "reports" ? '<button class="btn secondary" onclick="editWorkspaceItem(&quot;' + item.id + '&quot;)">تعديل</button>' : '') + '<button class="btn delete" onclick="deleteWorkspaceItem(&quot;' + item.id + '&quot;)">حذف</button></div>' : '';
