@@ -1829,7 +1829,7 @@ async function saveWorkspaceItem(event, type) {
       let parsedLink;
       try { parsedLink = new URL(linkInput); } catch { throw new Error("الرابط غير صحيح. أدخلي رابطًا يبدأ بـ https:// أو http://"); }
       if (!["http:", "https:"].includes(parsedLink.protocol)) throw new Error("يسمح بروابط http وhttps فقط.");
-      if (!attachments.some(file => file.url === parsedLink.href)) attachments.push({ name: parsedLink.hostname + (parsedLink.pathname.split("/").pop() ? " / " + parsedLink.pathname.split("/").pop() : ""), type: /\.html?($|[?#])/i.test(parsedLink.href) ? "text/html" : "", url: parsedLink.href });
+      if (!attachments.some(file => file.url === parsedLink.href)) attachments.push({ name: parsedLink.hostname + (parsedLink.pathname.split("/").pop() ? " / " + parsedLink.pathname.split("/").pop() : ""), type: "text/html", url: parsedLink.href });
     }
     const newlyUploadedPaths = [];
     for (const file of validFiles) {
