@@ -960,7 +960,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
     <div class="problem-grid" id="problemGrid"></div>
 
   <section id="suggestionsPage" class="workspace-page" style="margin-top:28px">
-    <div class="page-header"><div></div><button class="btn primary admin-only" onclick="openWorkspaceForm('suggestions')">＋ إضافة مقترح أو طلب</button></div>
+
     <div class="workspace-form panel admin-only" id="suggestionsFormPanel" hidden><h2>مقترح أو طلب جديد</h2><form onsubmit="saveWorkspaceItem(event,'suggestions')"><div class="form-grid">
       <div class="field full"><label>العنوان *</label><input id="suggestionsTitle" required maxlength="180"></div>
       <div class="field"><label>النوع</label><select id="suggestionsKind"><option>مقترح</option><option>طلب</option></select></div>
@@ -1765,7 +1765,7 @@ async function renderWorkspaceItems(type) {
   if (!list) return;
   const items = workspaceItems.filter(item => item.category === type);
   if (!items.length) {
-    list.innerHTML = '<div class="empty">لا توجد بيانات حتى الآن في هذا القسم.</div>';
+    if (type !== "suggestions")     list.innerHTML = '<div class="empty">لا توجد بيانات حتى الآن في هذا القسم.</div>';
     return;
   }
   const cards = await Promise.all(items.map(async item => {
