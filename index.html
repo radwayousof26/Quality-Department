@@ -1046,7 +1046,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <div class="field full"><label>الملخص</label><textarea id="reportsContent"></textarea></div>
       <div class="field full"><label>القرارات</label><textarea id="reportsDecisions"></textarea></div>
       <div class="field full"><label>المتابعات والإجراءات المطلوبة</label><textarea id="reportsFollowUp"></textarea></div>
-      <div class="field full"><label>مرفقات الاجتماع (صور / فيديو / PDF)</label><div class="upload"><p>يمكنك إضافة أكثر من صورة أو فيديو أو ملف PDF، وستظهر معاينة قبل الحفظ.</p><input id="reportsFiles" type="file" accept="image/*,video/*,.pdf,application/pdf" multiple><div id="reportsFilesPreview" class="workspace-file-preview"></div></div></div>
+      <div class="field full"><label>مرفقات الاجتماع (صور / فيديو / PDF / HTML)</label><div class="upload"><p>يمكنك إضافة صور أو فيديوهات أو PDF أو HTML، مع معاينة قبل الحفظ.</p><input id="reportsFiles" type="file" accept="image/*,video/*,.pdf,application/pdf,.html,.htm,text/html" multiple><div id="reportsFilesPreview" class="workspace-file-preview"></div></div></div>
     </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('reports')">إلغاء</button></div></form></div>
     <div id="reportsList" class="workspace-list"></div>
   </section>
@@ -1114,9 +1114,9 @@ body.admin-user .admin-only { display: inline-flex !important; }
         <div class="field full">
           <label>إضافة وسيلة توثيق</label>
           <div class="upload">
-            <p>اختر تسجيلًا صوتيًا أو صورة أو ملف PDF.</p>
+            <p>اختر تسجيلًا صوتيًا أو صورة أو PDF أو HTML.</p>
             <input id="teacherFiles" type="file"
-              accept="audio/*,image/*,.pdf,application/pdf" multiple>
+              accept="audio/*,image/*,.pdf,application/pdf,.html,.htm,text/html" multiple>
             <div class="attachments" id="fileList"></div>
           </div>
         </div>
@@ -1188,8 +1188,8 @@ body.admin-user .admin-only { display: inline-flex !important; }
           <textarea id="problemAction"></textarea>
         </div>
         <div class="field full">
-          <label for="problemFiles">إرفاق صور أو ملفات PDF (اختياري)</label>
-          <input id="problemFiles" type="file" accept="image/*,.pdf,application/pdf" multiple>
+          <label for="problemFiles">إرفاق صور أو PDF أو HTML (اختياري)</label>
+          <input id="problemFiles" type="file" accept="image/*,.pdf,application/pdf,.html,.htm,text/html" multiple>
           <small>يمكن اختيار أكثر من ملف، بحد أقصى 15 ميجابايت لكل ملف.</small>
           <div id="problemExistingFiles" class="attachments"></div>
         </div>
@@ -1560,7 +1560,7 @@ async function loadData() {
 async function uploadIssueFile(file, issueId) {
   const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
   const path = `system-issues/${issueId}/${crypto.randomUUID()}-${safeName}`;
-  const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (file.type || "application/octet-stream");
+  const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (/\.html?$/i.test(file.name) ? "text/html" : (file.type || "application/octet-stream"));
   const { error } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType: inferredType, upsert: false });
   if (error) throw error;
   return path;
@@ -1752,7 +1752,7 @@ async function renderWorkspaceItems(type) {
       const typeName = String(file.type || "").toLowerCase();
       const preview = typeName.startsWith("image/") ? '<img src="' + url + '" alt="' + name + '" loading="lazy">' :
         typeName.startsWith("video/") ? '<video src="' + url + '" controls preload="metadata"></video>' :
-        (typeName === "application/pdf" || /\.pdf$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' : '';
+        (typeName === "application/pdf" || /\.pdf$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' : (typeName === "text/html" || /\.html?$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" sandbox="" loading="lazy"></iframe>' : '';
       return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a></div>';
     }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
@@ -1805,15 +1805,15 @@ async function saveWorkspaceItem(event, type) {
   };
   try {
     const pickedFiles = type === "reports" ? Array.from($("reportsFiles")?.files || []) : [];
-    const validFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/") || file.type === "application/pdf" || /\\.pdf$/i.test(file.name));
-    if (validFiles.length !== pickedFiles.length) throw new Error("المسموح به الصور والفيديو وملفات PDF فقط.");
+    const validFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/") || file.type === "application/pdf" || file.type === "text/html" || /\\.(pdf|html?)$/i.test(file.name));
+    if (validFiles.length !== pickedFiles.length) throw new Error("المسموح به الصور والفيديو وملفات PDF وHTML فقط.");
     if (validFiles.some(file => file.size > 50 * 1024 * 1024)) throw new Error("حجم كل مرفق يجب ألا يتجاوز 50 ميجابايت.");
     const itemId = crypto.randomUUID();
     const attachments = [];
     for (const file of validFiles) {
       const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
       const path = "workspace/reports/" + itemId + "/" + crypto.randomUUID() + "-" + safeName;
-      const contentType = /\\.pdf$/i.test(file.name) ? "application/pdf" : (file.type || "application/octet-stream");
+      const contentType = /\\.pdf$/i.test(file.name) ? "application/pdf" : (/\\.html?$/i.test(file.name) ? "text/html" : (file.type || "application/octet-stream"));
       const { error: uploadError } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType, upsert: false });
       if (uploadError) throw uploadError;
       attachments.push({ name: file.name, type: contentType, path });
@@ -1877,6 +1877,7 @@ if (reportsFilesInput) reportsFilesInput.addEventListener("change", event => {
     if (file.type.startsWith("image/")) { media = document.createElement("img"); media.style.maxWidth = "100%"; media.style.maxHeight = "220px"; }
     else if (file.type.startsWith("video/")) { media = document.createElement("video"); media.controls = true; media.style.maxWidth = "100%"; media.style.maxHeight = "220px"; }
     else if (file.type === "application/pdf" || /\\.pdf$/i.test(file.name)) { media = document.createElement("iframe"); media.style.width = "100%"; media.style.height = "220px"; }
+    else if (file.type === "text/html" || /\.html?$/i.test(file.name)) { media = document.createElement("iframe"); media.setAttribute("sandbox", ""); media.style.width = "100%"; media.style.height = "220px"; }
     if (media) { media.src = url; wrapper.appendChild(media); }
     preview.appendChild(wrapper);
   });
@@ -2313,8 +2314,8 @@ const id = $("problemId").value || crypto.randomUUID();
   };
 
   const pickedFiles = Array.from($("problemFiles").files || []);
-  const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").toLowerCase() === "application/pdf" || /\.pdf$/i.test(file.name));
-  if (allowedFiles.length !== pickedFiles.length) { alert("اختر صورًا أو ملفات PDF فقط."); return; }
+  const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").toLowerCase() === "application/pdf" || String(file.type || "").toLowerCase() === "text/html" || /\.(pdf|html?)$/i.test(file.name));
+  if (allowedFiles.length !== pickedFiles.length) { alert("اختر صورًا أو ملفات PDF أو HTML فقط."); return; }
   if (allowedFiles.some(file => file.size > 15 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 15 ميجابايت."); return; }
   try {
     for (const file of allowedFiles) {
