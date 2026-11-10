@@ -24,10 +24,12 @@
     }
   </script>
   <style>
-    /* Yellow action buttons use white text and a thin black outline. */
+    /* Yellow action buttons: outline the white letters, not the button. */
     button[class*="bg-yellow"], button[class*="bg-amber"], a[class*="bg-yellow"], a[class*="bg-amber"] {
       color: #fff !important;
-      border: 1px solid #171717 !important;
+      border: 0 !important;
+      -webkit-text-stroke: .45px #171717;
+      paint-order: stroke fill;
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
