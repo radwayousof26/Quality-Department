@@ -679,13 +679,6 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
   .navigation button { padding: 10px 12px; font-size: 12px; }
 }
 
-/* Yellow buttons: white lettering with a thin black outline (not a button border). */
-button.primary, a.primary, header .btn.secondary, .navigation button.active {
-  color: #fff !important;
-  border: 0 !important;
-  -webkit-text-stroke: .45px #171717;
-  paint-order: stroke fill;
-}
 
 /* الهوية البصرية الصفراء والسوداء */
 ::selection { background: var(--yellow); color: var(--text); }
@@ -785,6 +778,17 @@ body.admin-user .admin-only { display: inline-flex !important; }
 .password-settings-card input{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px}
 .password-settings-close{float:left}
 #passwordChangeMessage{margin:12px 0}
+
+/* Site-wide yellow controls: white letters with a fine black outline. */
+button.primary,
+a.primary,
+header .btn.secondary,
+.navigation button.active,
+.issues-subnav button.active {
+  color: #fff !important;
+  -webkit-text-stroke: .45px #171717;
+  paint-order: stroke fill;
+}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
