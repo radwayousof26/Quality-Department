@@ -679,10 +679,12 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
   .navigation button { padding: 10px 12px; font-size: 12px; }
 }
 
-/* Yellow buttons: white text with a thin black outline. */
+/* Yellow buttons: white lettering with a thin black outline (not a button border). */
 button.primary, a.primary, header .btn.secondary, .navigation button.active {
   color: #fff !important;
-  border: 1px solid #171717 !important;
+  border: 0 !important;
+  -webkit-text-stroke: .45px #171717;
+  paint-order: stroke fill;
 }
 
 /* الهوية البصرية الصفراء والسوداء */
