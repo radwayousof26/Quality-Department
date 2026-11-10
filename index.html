@@ -1039,7 +1039,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
 
   <section id="reportsPage" class="page workspace-page">
     <div class="page-header"><div><h1>News & Meetings</h1><p class="muted">التقارير ومواعيد الاجتماعات والملخصات والقرارات والمتابعات.</p></div><button class="btn primary admin-only" onclick="openWorkspaceForm('reports')">＋ إضافة تقرير أو اجتماع</button></div>
-    <div class="workspace-form panel admin-only" id="reportsFormPanel" hidden><h2>تقرير أو اجتماع جديد</h2><form onsubmit="saveWorkspaceItem(event,'reports')"><div class="form-grid">
+    <div class="workspace-form panel admin-only" id="reportsFormPanel" hidden><h2>تقرير أو اجتماع جديد</h2><form onsubmit="saveWorkspaceItem(event,'reports')"><input type="hidden" id="reportsEditId"><div class="form-grid">
       <div class="field full"><label>العنوان *</label><input id="reportsTitle" required maxlength="180"></div>
       <div class="field"><label>النوع</label><select id="reportsKind"><option>تقرير</option><option>اجتماع</option></select></div>
       <div class="field"><label>التاريخ / موعد الاجتماع</label><input id="reportsDate" type="date"></div>
@@ -1709,6 +1709,12 @@ function openWorkspaceForm(type) {
 function closeWorkspaceForm(type) {
   const panel = $(type + "FormPanel");
   if (panel) { panel.hidden = true; panel.querySelector("form").reset(); }
+  if (type === "reports") {
+    const editId = $("reportsEditId"); if (editId) editId.value = "";
+    const heading = panel?.querySelector("h2"); if (heading) heading.textContent = "تقرير أو اجتماع جديد";
+    const submit = panel?.querySelector('button[type="submit"]'); if (submit) submit.textContent = "حفظ";
+    const preview = $("reportsFilesPreview"); if (preview) preview.innerHTML = "";
+  }
 }
 function workspaceField(type, field) { return $(type + field).value.trim(); }
 async function workspaceAttachmentUrl(file) {
@@ -1758,7 +1764,7 @@ async function renderWorkspaceItems(type) {
       return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a></div>';
     }))).join("") + '</div>' : '';
     const removeButton = document.body.classList.contains("admin-user")
-      ? '<div class="workspace-actions"><button class="btn delete" onclick="deleteWorkspaceItem(&quot;' + item.id + '&quot;)">حذف</button></div>' : '';
+      ? '<div class="workspace-actions">' + (type === "reports" ? '<button class="btn secondary" onclick="editWorkspaceItem(&quot;' + item.id + '&quot;)">تعديل</button>' : '') + '<button class="btn delete" onclick="deleteWorkspaceItem(&quot;' + item.id + '&quot;)">حذف</button></div>' : '';
     return '<article class="workspace-card"><h3>' + title + '</h3>' + details + attachmentHtml + removeButton + '</article>';
   }));
   list.innerHTML = cards.join("");
@@ -1810,8 +1816,10 @@ async function saveWorkspaceItem(event, type) {
     const validFiles = pickedFiles.filter(file => file.type.startsWith("image/") || file.type.startsWith("video/") || file.type === "application/pdf" || file.type === "text/html" || /\\.(pdf|html?)$/i.test(file.name));
     if (validFiles.length !== pickedFiles.length) throw new Error("المسموح به الصور والفيديو وملفات PDF وHTML فقط.");
     if (validFiles.some(file => file.size > 50 * 1024 * 1024)) throw new Error("حجم كل مرفق يجب ألا يتجاوز 50 ميجابايت.");
-    const itemId = crypto.randomUUID();
-    const attachments = [];
+    const editingId = type === "reports" ? ($("reportsEditId")?.value || "") : "";
+    const existingItem = editingId ? workspaceItems.find(item => item.id === editingId) : null;
+    const itemId = editingId || crypto.randomUUID();
+    const attachments = Array.isArray(existingItem?.attachments) ? [...existingItem.attachments] : [];
     for (const file of validFiles) {
       const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
       const path = "workspace/reports/" + itemId + "/" + crypto.randomUUID() + "-" + safeName;
@@ -1820,21 +1828,49 @@ async function saveWorkspaceItem(event, type) {
       if (uploadError) throw uploadError;
       attachments.push({ name: file.name, type: contentType, path });
     }
-    const { error } = await supabaseClient.from("quality_workspace_items").insert({ ...payload, id: itemId, attachments });
+    const query = editingId
+      ? supabaseClient.from("quality_workspace_items").update({ ...payload, attachments }).eq("id", itemId)
+      : supabaseClient.from("quality_workspace_items").insert({ ...payload, id: itemId, attachments });
+    const { error } = await query;
     if (error) {
       if (attachments.length) await supabaseClient.storage.from("quality-files").remove(attachments.map(file => file.path));
       throw error;
     }
     event.target.reset();
+    if (type === "reports") { const editId = $("reportsEditId"); if (editId) editId.value = ""; }
     const preview = $("reportsFilesPreview");
     if (preview) preview.innerHTML = "";
     closeWorkspaceForm(type);
     await loadWorkspaceItems();
-    alert("تم حفظ البيانات والمرفقات بنجاح.");
+    alert(editingId ? "تم تحديث التقرير أو الاجتماع بنجاح." : "تم حفظ البيانات والمرفقات بنجاح.");
   } catch (error) {
     console.error("تعذر حفظ بيانات القسم:", error);
     alert("تعذر الحفظ أو رفع المرفق: " + (error.message || "تحققي من إعدادات الجدول وصلاحيات Storage."));
   }
+}
+async function editWorkspaceItem(id) {
+  if (!(await requireAdmin())) return;
+  const item = workspaceItems.find(entry => entry.id === id && entry.category === "reports");
+  if (!item) { alert("لم يتم العثور على التقرير أو الاجتماع."); return; }
+  openWorkspaceForm("reports");
+  $("reportsEditId").value = item.id;
+  $("reportsTitle").value = item.title || "";
+  $("reportsKind").value = item.kind || "تقرير";
+  $("reportsDate").value = item.event_date || "";
+  $("reportsResponsible").value = item.responsible || "";
+  $("reportsStatus").value = item.status || "مجدول";
+  $("reportsContent").value = item.content || "";
+  $("reportsDecisions").value = item.decisions || "";
+  $("reportsFollowUp").value = item.follow_up || "";
+  const heading = $("reportsFormPanel").querySelector("h2");
+  if (heading) heading.textContent = "تعديل تقرير أو اجتماع";
+  const submit = $("reportsFormPanel").querySelector('button[type="submit"]');
+  if (submit) submit.textContent = "حفظ التعديلات";
+  const preview = $("reportsFilesPreview");
+  if (preview) preview.innerHTML = (Array.isArray(item.attachments) && item.attachments.length)
+    ? '<p class="muted">المرفقات الحالية محفوظة ولن تُحذف عند التعديل. يمكنك إضافة مرفقات جديدة أدناه.</p><ul>' + item.attachments.map(file => '<li>' + escapeHTML(file.name || "مرفق") + '</li>').join("") + '</ul>'
+    : '<p class="muted">لا توجد مرفقات حالية.</p>';
+  $("reportsFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 async function deleteWorkspaceItem(id) {
   if (!(await requireAdmin())) return;
