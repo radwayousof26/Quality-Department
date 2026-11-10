@@ -1820,6 +1820,7 @@ async function saveWorkspaceItem(event, type) {
     const existingItem = editingId ? workspaceItems.find(item => item.id === editingId) : null;
     const itemId = editingId || crypto.randomUUID();
     const attachments = Array.isArray(existingItem?.attachments) ? [...existingItem.attachments] : [];
+    const newlyUploadedPaths = [];
     for (const file of validFiles) {
       const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
       const path = "workspace/reports/" + itemId + "/" + crypto.randomUUID() + "-" + safeName;
@@ -1827,14 +1828,20 @@ async function saveWorkspaceItem(event, type) {
       const { error: uploadError } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType, upsert: false });
       if (uploadError) throw uploadError;
       attachments.push({ name: file.name, type: contentType, path });
+      newlyUploadedPaths.push(path);
     }
     const query = editingId
-      ? supabaseClient.from("quality_workspace_items").update({ ...payload, attachments }).eq("id", itemId)
-      : supabaseClient.from("quality_workspace_items").insert({ ...payload, id: itemId, attachments });
-    const { error } = await query;
+      ? supabaseClient.from("quality_workspace_items").update({ ...payload, attachments }).eq("id", itemId).select("id").maybeSingle()
+      : supabaseClient.from("quality_workspace_items").insert({ ...payload, id: itemId, attachments }).select("id").maybeSingle();
+    const { data: savedRow, error } = await query;
     if (error) {
-      if (attachments.length) await supabaseClient.storage.from("quality-files").remove(attachments.map(file => file.path));
+      if (newlyUploadedPaths.length) await supabaseClient.storage.from("quality-files").remove(newlyUploadedPaths);
       throw error;
+    }
+    if (!savedRow?.id) {
+      if (newlyUploadedPaths.length) await supabaseClient.storage.from("quality-files").remove(newlyUploadedPaths);
+      if (editingId) throw new Error("لم يتم تحديث السجل. غالبًا سياسة UPDATE في Supabase لا تسمح بالتعديل لحساب الإدارة. راجعي سياسة RLS لجدول quality_workspace_items.");
+      throw new Error("لم يتم تأكيد حفظ السجل في قاعدة البيانات.");
     }
     event.target.reset();
     if (type === "reports") { const editId = $("reportsEditId"); if (editId) editId.value = ""; }
