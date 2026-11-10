@@ -1762,7 +1762,7 @@ async function renderWorkspaceItems(type) {
       const preview = typeName.startsWith("image/") ? '<img src="' + url + '" alt="' + name + '" loading="lazy">' :
         typeName.startsWith("video/") ? '<video src="' + url + '" controls preload="metadata"></video>' :
         (typeName === "application/pdf" || /\.pdf($|[?#])/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' :
-        isHtml ? '<iframe class="html-preview" src="' + url + '" title="' + name + '" sandbox="allow-scripts allow-forms allow-popups" loading="lazy"></iframe>' : '';
+        isHtml ? '<iframe class="html-preview" data-html-src="' + escapeHTML(url) + '" title="' + name + '" sandbox="allow-scripts allow-forms allow-popups" loading="lazy"></iframe>' : '';
       const removeFileButton = type === "reports" && document.body.classList.contains("admin-user")
         ? '<button type="button" class="btn delete" style="margin-top:8px" onclick="removeWorkspaceAttachment(&quot;' + item.id + '&quot;,' + files.indexOf(file) + ')">حذف المرفق</button>' : '';
       return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a>' + removeFileButton + '</div>';
@@ -1772,6 +1772,18 @@ async function renderWorkspaceItems(type) {
     return '<article class="workspace-card"><h3>' + title + '</h3>' + details + attachmentHtml + removeButton + '</article>';
   }));
   list.innerHTML = cards.join("");
+  const htmlFrames = Array.from(list.querySelectorAll("iframe[data-html-src]"));
+  await Promise.all(htmlFrames.map(async frame => {
+    try {
+      const response = await fetch(frame.getAttribute("data-html-src"));
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const htmlSource = await response.text();
+      frame.srcdoc = htmlSource;
+    } catch (previewError) {
+      console.error("تعذرت معاينة صفحة HTML:", previewError);
+      frame.insertAdjacentHTML("afterend", '<p class="muted">تعذرت معاينة صفحة HTML. استخدم رابط فتح / تنزيل.</p>');
+    }
+  }));
 }
 async function loadWorkspaceItems() {
   if (workspaceLoading) return;
