@@ -1755,7 +1755,7 @@ async function renderWorkspaceItems(type) {
     const files = Array.isArray(item.attachments) ? item.attachments : [];
     const attachmentHtml = files.length ? '<div class="workspace-attachments">' + (await Promise.all(files.map(async file => {
       const url = await workspaceAttachmentUrl(file);
-      if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذرت المعاينة. تحققي من صلاحيات Storage.</p></div>';
+      if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذرت المعاينة. تحقق من صلاحيات Storage.</p></div>';
       const name = escapeHTML(file.name || "مرفق");
       const typeName = String(file.type || "").toLowerCase();
       const isHtml = typeName === "text/html" || /\.html?($|[?#])/i.test(file.name || "") || (file.url && /\.html?($|[?#])/i.test(file.url));
@@ -1827,7 +1827,7 @@ async function saveWorkspaceItem(event, type) {
     const linkInput = type === "reports" ? ($("reportsAttachmentUrl")?.value || "").trim() : "";
     if (linkInput) {
       let parsedLink;
-      try { parsedLink = new URL(linkInput); } catch { throw new Error("الرابط غير صحيح. أدخلي رابطًا يبدأ بـ https:// أو http://"); }
+      try { parsedLink = new URL(linkInput); } catch { throw new Error("الرابط غير صحيح. أدخل رابطًا يبدأ بـ https:// أو http://"); }
       if (!["http:", "https:"].includes(parsedLink.protocol)) throw new Error("يسمح بروابط http وhttps فقط.");
       if (!attachments.some(file => file.url === parsedLink.href)) attachments.push({ name: parsedLink.hostname + (parsedLink.pathname.split("/").pop() ? " / " + parsedLink.pathname.split("/").pop() : ""), type: "text/html", url: parsedLink.href });
     }
@@ -1851,7 +1851,7 @@ async function saveWorkspaceItem(event, type) {
     }
     if (!savedRow?.id) {
       if (newlyUploadedPaths.length) await supabaseClient.storage.from("quality-files").remove(newlyUploadedPaths);
-      if (editingId) throw new Error("لم يتم تحديث السجل. غالبًا سياسة UPDATE في Supabase لا تسمح بالتعديل لحساب الإدارة. راجعي سياسة RLS لجدول quality_workspace_items.");
+      if (editingId) throw new Error("لم يتم تحديث السجل. غالبًا سياسة UPDATE في Supabase لا تسمح بالتعديل لحساب الإدارة. راجع سياسة RLS لجدول quality_workspace_items.");
       throw new Error("لم يتم تأكيد حفظ السجل في قاعدة البيانات.");
     }
     event.target.reset();
@@ -1864,7 +1864,7 @@ async function saveWorkspaceItem(event, type) {
     alert(editingId ? "تم تحديث التقرير أو الاجتماع بنجاح." : "تم حفظ البيانات والمرفقات بنجاح.");
   } catch (error) {
     console.error("تعذر حفظ بيانات القسم:", error);
-    alert("تعذر الحفظ أو رفع المرفق: " + (error.message || "تحققي من إعدادات الجدول وصلاحيات Storage."));
+    alert("تعذر الحفظ أو رفع المرفق: " + (error.message || "تحقق من إعدادات الجدول وصلاحيات Storage."));
   }
 }
 async function removeWorkspaceAttachment(id, attachmentIndex) {
@@ -1875,13 +1875,13 @@ async function removeWorkspaceAttachment(id, attachmentIndex) {
     return;
   }
   const attachment = item.attachments[attachmentIndex];
-  if (!confirm('هل تريدين حذف المرفق "' + (attachment.name || "مرفق") + '"؟')) return;
+  if (!confirm('هل تريد حذف المرفق "' + (attachment.name || "مرفق") + '"؟')) return;
   const updatedAttachments = item.attachments.filter((file, index) => index !== attachmentIndex);
   try {
     const { data, error } = await supabaseClient.from("quality_workspace_items")
       .update({ attachments: updatedAttachments }).eq("id", id).select("id").maybeSingle();
     if (error) throw error;
-    if (!data?.id) throw new Error("لم يتم تحديث السجل. تحققي من صلاحية UPDATE في Supabase.");
+    if (!data?.id) throw new Error("لم يتم تحديث السجل. تحقق من صلاحية UPDATE في Supabase.");
     workspaceItems = workspaceItems.map(entry => entry.id === id ? { ...entry, attachments: updatedAttachments } : entry);
     if (attachment.path) {
       const { error: storageError } = await supabaseClient.storage.from("quality-files").remove([attachment.path]);
@@ -1891,7 +1891,7 @@ async function removeWorkspaceAttachment(id, attachmentIndex) {
     alert("تم حذف المرفق بنجاح.");
   } catch (error) {
     console.error("تعذر حذف مرفق الاجتماع:", error);
-    alert("تعذر حذف المرفق: " + (error.message || "تحققي من صلاحيات Supabase."));
+    alert("تعذر حذف المرفق: " + (error.message || "تحقق من صلاحيات Supabase."));
   }
 }
 async function editWorkspaceItem(id) {
@@ -1920,7 +1920,7 @@ async function editWorkspaceItem(id) {
 }
 async function deleteWorkspaceItem(id) {
   if (!(await requireAdmin())) return;
-  if (!confirm("هل تريدين حذف هذا السجل نهائيًا؟")) return;
+  if (!confirm("هل تريد حذف هذا السجل نهائيًا؟")) return;
   try {
     const item = workspaceItems.find(entry => entry.id === id);
     const storedFiles = Array.isArray(item?.attachments) ? item.attachments : [];
