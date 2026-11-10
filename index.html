@@ -1048,7 +1048,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <div class="field full"><label>الملخص</label><textarea id="reportsContent"></textarea></div>
       <div class="field full"><label>القرارات</label><textarea id="reportsDecisions"></textarea></div>
       <div class="field full"><label>المتابعات والإجراءات المطلوبة</label><textarea id="reportsFollowUp"></textarea></div>
-      <div class="field full"><label>مرفقات الاجتماع (صور / فيديو / PDF / HTML)</label><div class="upload"><p>يمكنك إضافة صور أو فيديوهات أو PDF أو HTML، مع معاينة قبل الحفظ.</p><input id="reportsFiles" type="file" accept="image/*,video/*,.pdf,application/pdf,.html,.htm,text/html" multiple><div id="reportsFilesPreview" class="workspace-file-preview"></div></div></div>
+      <div class="field full"><label>مرفقات الاجتماع (صور / فيديو / PDF / HTML أو رابط)</label><div class="upload"><p>يمكنك رفع ملفات أو لصق رابط مباشر لصفحة أو ملف لعرضه داخل الاجتماع.</p><input id="reportsFiles" type="file" accept="image/*,video/*,.pdf,application/pdf,.html,.htm,text/html" multiple><input id="reportsAttachmentUrl" type="url" placeholder="https://example.com/page.html" style="margin-top:10px"><div id="reportsFilesPreview" class="workspace-file-preview"></div></div></div>
     </div><div class="actions"><button class="btn primary" type="submit">حفظ</button><button class="btn secondary" type="button" onclick="closeWorkspaceForm('reports')">إلغاء</button></div></form></div>
     <div id="reportsList" class="workspace-list"></div>
   </section>
@@ -1758,9 +1758,11 @@ async function renderWorkspaceItems(type) {
       if (!url) return '<div class="workspace-attachment">' + escapeHTML(file.name || "مرفق") + '<p class="muted">تعذرت المعاينة. تحققي من صلاحيات Storage.</p></div>';
       const name = escapeHTML(file.name || "مرفق");
       const typeName = String(file.type || "").toLowerCase();
+      const isHtml = typeName === "text/html" || /\.html?($|[?#])/i.test(file.name || "") || (file.url && /\.html?($|[?#])/i.test(file.url));
       const preview = typeName.startsWith("image/") ? '<img src="' + url + '" alt="' + name + '" loading="lazy">' :
         typeName.startsWith("video/") ? '<video src="' + url + '" controls preload="metadata"></video>' :
-        (typeName === "application/pdf" || /\.pdf$/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' : (typeName === "text/html" || /\.html?$/i.test(file.name || "")) ? '<iframe class="html-preview" src="' + url + '" title="' + name + '" sandbox="allow-scripts" loading="lazy"></iframe>' : '';
+        (typeName === "application/pdf" || /\.pdf($|[?#])/i.test(file.name || "")) ? '<iframe src="' + url + '" title="' + name + '" loading="lazy"></iframe>' :
+        isHtml ? '<iframe class="html-preview" src="' + url + '" title="' + name + '" sandbox="allow-scripts allow-forms allow-popups" loading="lazy"></iframe>' : '';
       const removeFileButton = type === "reports" && document.body.classList.contains("admin-user")
         ? '<button type="button" class="btn delete" style="margin-top:8px" onclick="removeWorkspaceAttachment(&quot;' + item.id + '&quot;,' + files.indexOf(file) + ')">حذف المرفق</button>' : '';
       return '<div class="workspace-attachment">' + (preview || '<div class="muted">ملف مرفق</div>') + '<a href="' + url + '" target="_blank" rel="noopener">فتح / تنزيل: ' + name + '</a>' + removeFileButton + '</div>';
@@ -1822,11 +1824,18 @@ async function saveWorkspaceItem(event, type) {
     const existingItem = editingId ? workspaceItems.find(item => item.id === editingId) : null;
     const itemId = editingId || crypto.randomUUID();
     const attachments = Array.isArray(existingItem?.attachments) ? [...existingItem.attachments] : [];
+    const linkInput = type === "reports" ? ($("reportsAttachmentUrl")?.value || "").trim() : "";
+    if (linkInput) {
+      let parsedLink;
+      try { parsedLink = new URL(linkInput); } catch { throw new Error("الرابط غير صحيح. أدخلي رابطًا يبدأ بـ https:// أو http://"); }
+      if (!["http:", "https:"].includes(parsedLink.protocol)) throw new Error("يسمح بروابط http وhttps فقط.");
+      if (!attachments.some(file => file.url === parsedLink.href)) attachments.push({ name: parsedLink.hostname + (parsedLink.pathname.split("/").pop() ? " / " + parsedLink.pathname.split("/").pop() : ""), type: /\.html?($|[?#])/i.test(parsedLink.href) ? "text/html" : "", url: parsedLink.href });
+    }
     const newlyUploadedPaths = [];
     for (const file of validFiles) {
       const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
       const path = "workspace/reports/" + itemId + "/" + crypto.randomUUID() + "-" + safeName;
-      const contentType = /\\.pdf$/i.test(file.name) ? "application/pdf" : (/\\.html?$/i.test(file.name) ? "text/html" : (file.type || "application/octet-stream"));
+      const contentType = /\.pdf$/i.test(file.name) ? "application/pdf" : (/\.html?$/i.test(file.name) ? "text/html" : (file.type || "application/octet-stream"));
       const { error: uploadError } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType, upsert: false });
       if (uploadError) throw uploadError;
       attachments.push({ name: file.name, type: contentType, path });
@@ -1849,6 +1858,7 @@ async function saveWorkspaceItem(event, type) {
     if (type === "reports") { const editId = $("reportsEditId"); if (editId) editId.value = ""; }
     const preview = $("reportsFilesPreview");
     if (preview) preview.innerHTML = "";
+    const linkField = $("reportsAttachmentUrl"); if (linkField) linkField.value = "";
     closeWorkspaceForm(type);
     await loadWorkspaceItems();
     alert(editingId ? "تم تحديث التقرير أو الاجتماع بنجاح." : "تم حفظ البيانات والمرفقات بنجاح.");
