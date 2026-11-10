@@ -839,6 +839,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
   <button id="reportsNav" onclick="switchPage('reports')">News & Meetings</button>
   <button id="ecqNav" onclick="switchPage('ecq')">ECQ Man Power Dashboard</button>
   <button id="teacherReportsNav" onclick="switchPage('teacherReports')">Teacher's Reports Per Lecture</button>
+  <button id="ecqReportBuilderNav" onclick="switchPage('ecqReportBuilder')">ECQ Report Builder - Elkheta</button>
 </nav>
 
 <main>
@@ -996,6 +997,21 @@ body.admin-user .admin-only { display: inline-flex !important; }
       loading="lazy"
       style="display:block;width:100%;height:calc(100vh - 190px);min-height:650px;border:1px solid var(--border);border-radius:14px;background:#fff"
       referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </section>
+
+  <section id="ecqReportBuilderPage" class="page workspace-page">
+    <div class="page-header">
+      <div><h1>ECQ Report Builder - Elkheta</h1><p class="muted">إنشاء تقارير تقييم المحتوى التعليمي وتقارير الجودة مع معاينة مباشرة.</p></div>
+      <a href="ECQ-Report-Builder.html" target="_blank" rel="noopener noreferrer" class="btn secondary" style="text-decoration:none">فتح في نافذة جديدة ↗</a>
+    </div>
+    <iframe
+      id="ecqReportBuilderFrame"
+      src="ECQ-Report-Builder.html"
+      title="ECQ Report Builder - Elkheta"
+      loading="lazy"
+      style="display:block;width:100%;height:calc(100vh - 190px);min-height:760px;border:1px solid var(--border);border-radius:14px;background:#fff"
       allowfullscreen>
     </iframe>
   </section>
@@ -1644,7 +1660,7 @@ function refreshEmbeddedDashboard(page) {
 }
 
 function switchPage(page) {
-  const allowed = ["teachers", "system", "updates", "ecq", "teacherReports", "reports"];
+  const allowed = ["teachers", "system", "updates", "ecq", "teacherReports", "reports", "ecqReportBuilder"];
   const selectedPage = allowed.includes(page) ? page : "teachers";
   const isIssues = selectedPage === "teachers" || selectedPage === "system";
   if (["updates", "ecq", "teacherReports"].includes(selectedPage)) refreshEmbeddedDashboard(selectedPage);
@@ -1653,6 +1669,7 @@ function switchPage(page) {
   $("updatesPage").classList.toggle("active", selectedPage === "updates");
   $("ecqPage").classList.toggle("active", selectedPage === "ecq");
   $("teacherReportsPage").classList.toggle("active", selectedPage === "teacherReports");
+  $("ecqReportBuilderPage").classList.toggle("active", selectedPage === "ecqReportBuilder");
   $("reportsPage").classList.toggle("active", selectedPage === "reports");
   $("issuesSubnav").style.display = isIssues ? "flex" : "none";
   $("teachersSubNav").classList.toggle("active", selectedPage === "teachers");
@@ -1661,6 +1678,7 @@ function switchPage(page) {
   $("updatesNav").classList.toggle("active", selectedPage === "updates");
   $("ecqNav").classList.toggle("active", selectedPage === "ecq");
   $("teacherReportsNav").classList.toggle("active", selectedPage === "teacherReports");
+  $("ecqReportBuilderNav").classList.toggle("active", selectedPage === "ecqReportBuilder");
   $("reportsNav").classList.toggle("active", selectedPage === "reports");
   try { localStorage.setItem("quality-department-active-page", selectedPage); }
   catch (error) { console.warn("تعذر حفظ آخر صفحة مفتوحة.", error); }
