@@ -2585,6 +2585,7 @@ async function deleteProblemAttachment(problemId, attachmentIndex, returnToForm 
   }
   const oldAttachments = [...(problem.attachments || [])];
   problem.attachments = oldAttachments.filter((_, index) => index !== attachmentIndex);
+  problem.updated_at = new Date().toISOString();
   const saved = await saveData();
   if (!saved) {
     problem.attachments = oldAttachments;
