@@ -1196,9 +1196,9 @@ body.admin-user .admin-only { display: inline-flex !important; }
           <textarea id="problemAction"></textarea>
         </div>
         <div class="field full">
-          <label for="problemFiles">إرفاق صور أو PDF أو HTML (اختياري)</label>
-          <input id="problemFiles" type="file" accept="image/*,.pdf,application/pdf,.html,.htm,text/html" multiple>
-          <small>يمكن اختيار أكثر من ملف، بحد أقصى 15 ميجابايت لكل ملف.</small>
+          <label for="problemFiles">إرفاق صور أو فيديو أو PDF أو HTML (اختياري)</label>
+          <input id="problemFiles" type="file" accept="image/*,video/*,.mp4,.mov,.m4v,.webm,.avi,.mkv,.mpeg,.mpg,.3gp,.ogv,.wmv,.flv,.ts,.mts,.m2ts,.pdf,application/pdf,.html,.htm,text/html" multiple>
+          <small>يمكن اختيار أكثر من ملف، بما في ذلك MP4 وMOV وصيغ الفيديو الشائعة، بحد أقصى 50 ميجابايت لكل ملف.</small>
           <div id="problemExistingFiles" class="attachments"></div>
         </div>
       </div>
@@ -2265,6 +2265,7 @@ function getAttachmentKind(file) {
   const data = String(file.data || "").toLowerCase();
 
   if (type.startsWith("image/") || data.startsWith("data:image/")) return "image";
+  if (type.startsWith("video/") || data.startsWith("data:video/") || /\.(mp4|mov|m4v|webm|avi|mkv|mpeg|mpg|3gp|ogv|wmv|flv|ts|mts|m2ts)$/.test(name)) return "video";
   if (type.startsWith("audio/") || data.startsWith("data:audio/") || /\.(mp3|wav|ogg|m4a|aac|webm|opus)$/.test(name)) return "audio";
   if (type === "application/pdf" || data.startsWith("data:application/pdf") || name.endsWith(".pdf")) return "pdf";
   return "file";
@@ -2455,9 +2456,10 @@ const id = $("problemId").value || crypto.randomUUID();
   };
 
   const pickedFiles = Array.from($("problemFiles").files || []);
-  const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").toLowerCase() === "application/pdf" || String(file.type || "").toLowerCase() === "text/html" || /\.(pdf|html?)$/i.test(file.name));
-  if (allowedFiles.length !== pickedFiles.length) { alert("اختر صورًا أو ملفات PDF أو HTML فقط."); return; }
-  if (allowedFiles.some(file => file.size > 15 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 15 ميجابايت."); return; }
+  const videoExtensions = /\.(mp4|mov|m4v|webm|avi|mkv|mpeg|mpg|3gp|ogv|wmv|flv|ts|mts|m2ts)$/i;
+  const allowedFiles = pickedFiles.filter(file => String(file.type || "").startsWith("image/") || String(file.type || "").startsWith("video/") || String(file.type || "").toLowerCase() === "application/pdf" || String(file.type || "").toLowerCase() === "text/html" || /\.(pdf|html?)$/i.test(file.name) || videoExtensions.test(file.name));
+  if (allowedFiles.length !== pickedFiles.length) { alert("اختر صورًا أو فيديو أو ملفات PDF أو HTML."); return; }
+  if (allowedFiles.some(file => file.size > 50 * 1024 * 1024)) { alert("حجم كل ملف يجب ألا يتجاوز 50 ميجابايت."); return; }
   try {
     for (const file of allowedFiles) {
       const path = await uploadIssueFile(file, id);
