@@ -1573,6 +1573,13 @@ async function uploadIssueFile(file, issueId) {
   if (error) throw error;
   return path;
 }
+async function issueAttachmentUrl(file) {
+  if (file && file.data) return file.data;
+  if (!file || !file.path) return "";
+  const result = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600, { download: false });
+  if (result.error) { console.warn("تعذر إنشاء رابط مرفق المشكلة:", result.error.message); return ""; }
+  return result.data && result.data.signedUrl ? result.data.signedUrl : "";
+}
 async function persistTeacherToCloud(teacher) {
   let photoPath = teacher.photo_path || "";
   if (String(teacher.photo || "").startsWith("data:")) photoPath = await uploadTeacherDataUrl(teacher.photo, teacher.id, "photo");
