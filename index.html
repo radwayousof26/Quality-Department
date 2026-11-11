@@ -2581,9 +2581,10 @@ async function deleteProblemAttachment(problemId, attachmentIndex, returnToForm 
   }
 }
 
-function showProblem(id) {
+async function showProblem(id) {
   const p = problems.find(item => item.id === id);
   if (!p) return;
+  const attachmentUrls = await Promise.all((p.attachments || []).map(file => issueAttachmentUrl(file)));
 
   $("detailTitle").textContent = p.title;
 
@@ -2601,7 +2602,7 @@ function showProblem(id) {
     <div class="attachments">${(p.attachments || []).map((file, index) => {
       const kind = getAttachmentKind(file);
       const name = escapeHTML(file.name || "مرفق");
-      const data = escapeHTML(file.data || "");
+      const data = escapeHTML(attachmentUrls[index] || file.data || "");
       const preview = kind === "image"
         ? `<button type="button" class="image-preview-thumb" onclick="previewSystemIssueAttachment(&quot;${p.id}&quot;, ${index})"><img src="${data}" alt="${name}" style="max-width:180px;max-height:140px;object-fit:contain"><span>معاينة الصورة</span></button>`
         : kind === "pdf"
