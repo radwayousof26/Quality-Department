@@ -1487,7 +1487,7 @@ async function loadData() {
   // بيانات مشاكل ومقترحات المشتركة تُحمّل من Supabase لكل حساب.
   const { data: remoteProblems, error } = await supabaseClient
     .from("system_issues")
-    .select("id, title, impact, status, description, action, department, attachments, updated_at");
+    .select("id, title, impact, status, description, action, department, attachments");
 
   if (error) {
     console.error("تعذر تحميل مشاكل ومقترحات من Supabase:", error.message);
@@ -1505,7 +1505,6 @@ async function loadData() {
     description: row.description || "",
     action: row.action || "",
     department: problemDepartments(row.department),
-    updated_at: row.updated_at || localById.get(String(row.id))?.updated_at || new Date(0).toISOString(),
     attachments: Array.isArray(row.attachments) ? await Promise.all(row.attachments.map(async file => {
       if (!file.path) return file;
       const { data } = await supabaseClient.storage.from("quality-files").createSignedUrl(file.path, 3600);
@@ -1611,7 +1610,6 @@ async function syncProblemsToSupabase() {
     action: p.action,
     department: problemDepartments(p.department),
     attachments: (Array.isArray(p.attachments) ? p.attachments : []).map(file => ({ name: file.name || "مرفق", type: file.type || "", path: file.path || "" })),
-    updated_at: p.updated_at || new Date().toISOString()
   }));
 
   if (!rows.length) return true;
@@ -2457,7 +2455,6 @@ const id = $("problemId").value || crypto.randomUUID();
 
   const problem = {
     id,
-    updated_at: new Date().toISOString(),
     title: $("problemTitle").value.trim(),
     impact: $("problemImpact").value,
     status: $("problemStatus").value,
@@ -2546,20 +2543,8 @@ function renderProblems() {
       (!status || p.status === status) && (!impact || p.impact === impact);
   });
 
-  const sortedProblems = visibleProblems.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-  const dateGroups = [];
-  sortedProblems.forEach(problem => {
-    const date = new Date(problem.updated_at || 0);
-    const dateKey = Number.isNaN(date.getTime()) ? "unknown" : date.toLocaleDateString("en-CA");
-    let group = dateGroups.find(item => item.key === dateKey);
-    if (!group) { group = { key: dateKey, date, items: [] }; dateGroups.push(group); }
-    group.items.push(problem);
-  });
-  const todayKey = new Date().toLocaleDateString("en-CA");
-  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayKey = yesterday.toLocaleDateString("en-CA");
-  $("problemGrid").innerHTML = sortedProblems.length
-    ? dateGroups.map(group => `<div class="problem-date-group" style="grid-column:1/-1;margin:12px 0 4px"><h3 style="margin:0 0 10px;padding:9px 12px;border-right:4px solid var(--yellow,#f2c400);background:#f5f5f5;border-radius:8px">${group.key === todayKey ? "اليوم" : group.key === yesterdayKey ? "أمس" : group.key === "unknown" ? "تاريخ غير محدد" : group.date.toLocaleDateString("ar-EG",{year:"numeric",month:"long",day:"numeric"})}</h3><div class="problem-date-cards" style="display:grid;grid-template-columns:inherit;gap:inherit">${group.items.map(p => `
+  $("problemGrid").innerHTML = visibleProblems.length
+    ? visibleProblems.map(p => `
       <button class="problem ${departmentClass(selectedProblemDepartment === "all" ? problemDepartments(p.department)[0] : selectedProblemDepartment)}" aria-label="${escapeHTML(p.title)} — مستوى التأثير ${escapeHTML(p.impact)}، اضغط لعرض التفاصيل" onclick="showProblem('${p.id}')">
         <span class="impact impact-${p.impact === "عالٍ" ? "high" : p.impact === "متوسط" ? "medium" : "low"} ${p.status === "تم الحل" ? "is-resolved" : p.status === "تم الرفض" ? "is-rejected" : ""}" aria-label="${p.status === "تم الحل" ? "تم الحل" : p.status === "تم الرفض" ? "تم الرفض" : "مستوى التأثير " + escapeHTML(p.impact)}" title="${p.status === "تم الحل" ? "تم الحل" : p.status === "تم الرفض" ? "تم الرفض" : "التأثير " + escapeHTML(p.impact)}">
           <span class="impact-icon" aria-hidden="true"></span>
@@ -2569,7 +2554,7 @@ function renderProblems() {
           <span class="problem-title-text">${escapeHTML(p.title)}</span>
         </h3>
       </button>
-    `).join("")}</div></div>`).join("")
+    `).join("")
     : `<div class="empty">${problems.length ? "لا توجد نتائج مطابقة للتصفية." : "لا توجد مشاكل سيستم مسجلة حتى الآن."}</div>`;
 }
 
@@ -2585,7 +2570,6 @@ async function deleteProblemAttachment(problemId, attachmentIndex, returnToForm 
   }
   const oldAttachments = [...(problem.attachments || [])];
   problem.attachments = oldAttachments.filter((_, index) => index !== attachmentIndex);
-  problem.updated_at = new Date().toISOString();
   const saved = await saveData();
   if (!saved) {
     problem.attachments = oldAttachments;
