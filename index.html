@@ -1568,7 +1568,9 @@ async function loadData() {
 async function uploadIssueFile(file, issueId) {
   const safeName = String(file.name || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(-100) || "file";
   const path = `system-issues/${issueId}/${crypto.randomUUID()}-${safeName}`;
-  const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (/\.html?$/i.test(file.name) ? "text/html" : (file.type || "application/octet-stream"));
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const videoMimeByExtension = { mp4:"video/mp4", m4v:"video/x-m4v", mov:"video/quicktime", webm:"video/webm", avi:"video/x-msvideo", mkv:"video/x-matroska", mpeg:"video/mpeg", mpg:"video/mpeg", "3gp":"video/3gpp", ogv:"video/ogg", wmv:"video/x-ms-wmv", flv:"video/x-flv", ts:"video/mp2t", mts:"video/mp2t", m2ts:"video/mp2t" };
+  const inferredType = /\.pdf$/i.test(file.name) ? "application/pdf" : (/\.html?$/i.test(file.name) ? "text/html" : (file.type || videoMimeByExtension[extension] || "application/octet-stream"));
   const { error } = await supabaseClient.storage.from("quality-files").upload(path, file, { contentType: inferredType, upsert: false });
   if (error) throw error;
   return path;
