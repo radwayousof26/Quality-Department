@@ -2608,7 +2608,8 @@ async function showProblem(id) {
         : kind === "pdf"
           ? `<button type="button" class="btn secondary" onclick="previewSystemIssueAttachment(&quot;${p.id}&quot;, ${index})">معاينة PDF</button>`
           : "";
-      return `<div class="attachment"><strong>${name}</strong>${preview}<p><a href="${data}" target="_blank" rel="noopener">فتح / تنزيل المرفق</a></p><button type="button" class="btn delete" onclick="deleteProblemAttachment('${p.id}', ${index}, false)">حذف المرفق</button></div>`;
+      const videoPreview = kind === "video" && data ? '<video src="' + data + '" controls preload="metadata" style="display:block;max-width:100%;max-height:320px;margin:10px 0"></video>' : "";
+      return `<div class="attachment"><strong>${name}</strong>${preview}${videoPreview}<p><a href="${data}" target="_blank" rel="noopener">فتح / تنزيل المرفق</a></p><button type="button" class="btn delete" onclick="deleteProblemAttachment('${p.id}', ${index}, false)">حذف المرفق</button></div>`;
     }).join("") || "لا توجد مرفقات."}</div>
   `;
 
