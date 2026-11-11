@@ -253,6 +253,10 @@ button.stat.selected { outline: 3px solid currentColor; outline-offset: 2px; }
 .stat.dept-stat-quality { border-top: 4px solid #239b63; }
 .stat.dept-stat-marketing { border-top: 4px solid #9854bd; }
 .stat.dept-stat-tech { border-top: 4px solid #0f8b8d; }
+.stat.dept-stat-video-editing { border-top: 4px solid #8b5cf6; }
+.problem.dept-video-editing { border: 2px solid #8b5cf6; border-right: 6px solid #8b5cf6; background: #f5f0ff; }
+.department-badge.dept-video-editing { background: #e9ddff; color: #5b21b6; }
+.problem-grid .problem .problem-team-ribbon.dept-video-editing { background: #e9ddff; color: #5b21b6; }
 
 .status {
   display: inline-block;
@@ -936,6 +940,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
       <button type="button" class="stat dept-stat-quality department-filter" data-department="Quality" onclick="selectProblemDepartment('Quality')" aria-pressed="false"><span>مشاكل Quality</span><strong id="problemQualityCount">0</strong></button>
       <button type="button" class="stat dept-stat-marketing department-filter" data-department="Marketing" onclick="selectProblemDepartment('Marketing')" aria-pressed="false"><span>مشاكل Marketing</span><strong id="problemMarketingCount">0</strong></button>
        <button type="button" class="stat dept-stat-tech department-filter" data-department="Tech" onclick="selectProblemDepartment('Tech')" aria-pressed="false"><span>مشاكل Tech</span><strong id="problemTechCount">0</strong></button>
+       <button type="button" class="stat dept-stat-video-editing department-filter" data-department="Video editing" onclick="selectProblemDepartment('Video editing')" aria-pressed="false"><span>مشاكل Video editing</span><strong id="problemVideoEditingCount">0</strong></button>
       <button type="button" class="stat department-filter" data-department="all" onclick="selectProblemDepartment('all')" aria-pressed="false"><span>كل الأقسام</span><strong id="problemAllDepartmentCount">0</strong></button>
     </div>
 
@@ -1177,6 +1182,7 @@ body.admin-user .admin-only { display: inline-flex !important; }
             <label><input type="checkbox" name="problemDepartment" value="Quality"> Quality</label>
             <label><input type="checkbox" name="problemDepartment" value="Marketing"> Marketing</label>
              <label><input type="checkbox" name="problemDepartment" value="Tech"> Tech (Technical)</label>
+             <label><input type="checkbox" name="problemDepartment" value="Video editing"> Video editing</label>
           </div>
         </div>
 
@@ -2172,7 +2178,7 @@ function setTeacherDepartments(value) {
 }
 
 function departmentClass(department) {
-  return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing", "Tech": "dept-tech" })[department] || "";
+  return ({ "Operation": "dept-operation", "Data Entry": "dept-data-entry", "Quality": "dept-quality", "Marketing": "dept-marketing", "Tech": "dept-tech", "Video editing": "dept-video-editing" })[department] || "";
 }
 
 let selectedTeacherDepartment = "all";
@@ -2386,7 +2392,7 @@ function downloadFile(id, index) {
 /* إدارة مشاكل ومقترحات */
 
 function problemDepartments(value) {
-  const allowed = ["Operation", "Data Entry", "Quality", "Marketing", "Tech"];
+  const allowed = ["Operation", "Data Entry", "Quality", "Marketing", "Tech", "Video editing"];
   if (Array.isArray(value)) return value.filter(department => allowed.includes(department));
   if (!value) return [];
   if (allowed.includes(value)) return [value];
@@ -2492,7 +2498,7 @@ function selectProblemDepartment(department) {
     button.classList.toggle("selected", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
-  const names = { "Operation": "Operation", "Data Entry": "Data Entry", "Quality": "Quality", "Marketing": "Marketing", "Tech": "Tech", "all": "كل الأقسام" };
+  const names = { "Operation": "Operation", "Data Entry": "Data Entry", "Quality": "Quality", "Marketing": "Marketing", "Tech": "Tech", "Video editing": "Video editing", "all": "كل الأقسام" };
   $("problemIssuesHeading").textContent = department === "all" ? "مشاكل كل الأقسام" : "مشاكل قسم " + names[department];
   $("problemIssuesHint").textContent = department === "all" ? "يعرض هذا القسم كل مشاكل ومقترحات الأقسام." : "يعرض هذا القسم المشكلات المسجلة تحت " + names[department] + " فقط.";
   renderProblems();
@@ -2512,6 +2518,7 @@ function renderProblems() {
   $("problemQualityCount").textContent = departmentCount("Quality");
   $("problemMarketingCount").textContent = departmentCount("Marketing");
   $("problemTechCount").textContent = departmentCount("Tech");
+  $("problemVideoEditingCount").textContent = departmentCount("Video editing");
   $("problemAllDepartmentCount").textContent = problems.length;
 
   const query = $("problemSearch").value.trim().toLocaleLowerCase();
