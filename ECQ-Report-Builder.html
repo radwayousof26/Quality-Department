@@ -40,12 +40,21 @@
         <div>
           <h1 class="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <span>ECQ Report Builder</span>
-            <span class="text-xs bg-sky-100 text-sky-800 font-medium px-2 py-0.5 rounded-full border border-sky-200">v1.3</span>
+            <span class="text-xs bg-sky-100 text-sky-800 font-medium px-2 py-0.5 rounded-full border border-sky-200">v1.5</span>
           </h1>
           <p class="text-xs text-slate-500">Elkheta Educational Content Quality</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <button onclick="openReportsLibrary()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-folder-open text-sky-600"></i><span>Reports Library</span>
+        </button>
+        <button onclick="startNewReport()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2.5 rounded-xl font-semibold transition-all flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-plus"></i><span>New Report</span>
+        </button>
+        <button onclick="saveReportToLibrary()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-xl font-semibold shadow-sm transition-all flex items-center gap-2 text-sm">
+          <i class="fa-solid fa-floppy-disk"></i><span>Save Report</span>
+        </button>
         <button onclick="downloadReport()" class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md hover:shadow-lg transition-all flex items-center gap-2 text-sm">
           <i class="fa-solid fa-cloud-arrow-down"></i>
           <span>Download HTML Report</span>
@@ -69,6 +78,10 @@
         <button id="tabMeetingBtn" onclick="switchTab('meeting')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900">
           <i class="fa-solid fa-clipboard-check"></i>
           <span>Quality Report</span>
+        </button>
+        <button id="tabRevisionBtn" onclick="switchTab('revision')" class="flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-book-open-reader"></i>
+          <span>Revisions Report</span>
         </button>
       </div>
 
@@ -159,12 +172,21 @@
         </div>
 
         <!-- REPORT DESCRIPTION -->
-        <div class="space-y-3 pt-2">
+        <div id="reportDescriptionSection" class="space-y-3 pt-2">
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
             <i class="fa-solid fa-paragraph"></i> Report Description
           </label>
           <textarea id="reportDescription" dir="auto" rows="5" class="w-full text-sm rounded-lg border-slate-300 border px-3 py-2.5 focus:ring-2 focus:ring-sky-500 focus:outline-none placeholder-slate-400 leading-relaxed" placeholder="Write report observations, details, evaluation notes (Supports Arabic & English with automatic alignment)..."></textarea>
+        </div>
 
+        <div id="revisionDetailsSection" class="hidden space-y-3 pt-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-book-open-reader"></i> Revision Details
+          </label>
+          <textarea id="revisionDetails" dir="auto" rows="7" class="w-full text-sm rounded-lg border-emerald-200 bg-emerald-50/30 border px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder-slate-400 leading-relaxed" placeholder="Write revision topics, coverage, observations, notes and details..."></textarea>
+        </div>
+
+        <div id="mediaUploadSection" class="space-y-3">
           <!-- Upload Dropzone -->
           <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center bg-slate-50/50 hover:bg-slate-50 transition cursor-pointer relative">
             <input type="file" id="mediaUploadInput" multiple accept="image/*,audio/*,video/*,application/pdf,.html,.htm" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onchange="handleMultipleMediaUpload(event)">
@@ -179,6 +201,13 @@
 
           <!-- Staged Media Files List -->
           <div id="stagedMediaContainer" class="space-y-2 mt-2"></div>
+          <div id="revisionQueueActions" class="hidden pt-3 border-t border-emerald-100 space-y-3">
+            <button id="revisionSubmitBtn" type="button" onclick="addRevisionToBatch()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-sm"><i class="fa-solid fa-plus-circle"></i> Add This Revision & Start Another</button>
+            <button id="cancelRevisionEditBtn" type="button" onclick="cancelRevisionEdit()" class="hidden w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl font-semibold text-xs">Cancel Editing</button>
+            <div class="flex items-center justify-between"><h4 class="text-xs font-bold uppercase tracking-wider text-emerald-800">Revisions in This Report</h4><span id="revisionQueueCount" class="text-xs font-semibold text-emerald-700">0 revisions added</span></div>
+            <div id="revisionQueueList" class="space-y-2"></div>
+            <p class="text-[11px] text-slate-500">Add each revision separately. All added revisions will be included together in one downloaded HTML file.</p>
+          </div>
         </div>
 
       </form>
@@ -199,6 +228,27 @@
     </div>
 
   </main>
+
+  <!-- Local Reports Library -->
+  <div id="reportsLibraryModal" class="fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-3 sm:p-6">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div><h2 class="font-bold text-lg">Reports Library</h2><p class="text-xs text-slate-300">Reports saved locally in this browser</p></div>
+        <button onclick="closeReportsLibrary()" class="w-9 h-9 rounded-lg hover:bg-slate-700"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="p-4 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <input id="librarySearch" oninput="renderReportsLibrary()" placeholder="Search subject, teacher, creator..." class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+        <select id="libraryTypeFilter" onchange="renderReportsLibrary()" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5"><option value="">All Report Types</option><option value="teacher">Course Assessment</option><option value="meeting">Quality Report</option><option value="revision">Revisions Report</option></select>
+        <input id="librarySubjectFilter" oninput="renderReportsLibrary()" placeholder="Filter by subject" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+        <input id="libraryGradeFilter" oninput="renderReportsLibrary()" placeholder="Filter by Grade / Year" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+        <input id="libraryTeacherFilter" oninput="renderReportsLibrary()" placeholder="Filter by Teacher" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+        <input id="librarySpecialistFilter" oninput="renderReportsLibrary()" placeholder="Filter by Quality Specialist" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+        <input id="libraryDateFilter" type="date" oninput="renderReportsLibrary()" class="text-sm rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:ring-2 focus:ring-sky-500">
+      </div>
+      <div class="px-5 py-2 text-xs text-slate-500 flex justify-between"><span id="libraryCount">0 reports</span><span>Stored on this device/browser</span></div>
+      <div id="reportsLibraryList" class="p-4 pt-1 overflow-y-auto flex-1 space-y-3"><div class="text-center text-slate-400 py-12">Loading reports...</div></div>
+    </div>
+  </div>
 
   <!-- Interactive Global Media Modal -->
   <div id="mediaModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden flex items-center justify-center p-4">
@@ -222,6 +272,32 @@
     let teacherPhotoData = null;
     let currentAvatarPreset = 'male';
     let mediaFiles = [];
+    let revisionQueue = [];
+    let editingRevisionId = null;
+    let editingReportId = null;
+    const REPORTS_DB_NAME = 'ECQReportBuilderDB';
+    const REPORTS_STORE = 'reports';
+    let reportsDbPromise = null;
+
+    function openReportsDB() {
+      if (reportsDbPromise) return reportsDbPromise;
+      reportsDbPromise = new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('IndexedDB is not supported in this browser.')); return; }
+        const request = indexedDB.open(REPORTS_DB_NAME, 1);
+        request.onupgradeneeded = () => { const db = request.result; if (!db.objectStoreNames.contains(REPORTS_STORE)) db.createObjectStore(REPORTS_STORE, { keyPath: 'id' }); };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Could not open local reports storage.'));
+      });
+      return reportsDbPromise;
+    }
+
+    function dbRequest(mode, action, record) {
+      return openReportsDB().then(db => new Promise((resolve, reject) => {
+        const tx = db.transaction(REPORTS_STORE, mode); const store = tx.objectStore(REPORTS_STORE);
+        let req; if (action === 'all') req = store.getAll(); else if (action === 'put') req = store.put(record); else if (action === 'delete') req = store.delete(record);
+        req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error);
+      }));
+    }
 
     const defaultAvatars = {
       male: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%230284c7'/><circle cx='50' cy='36' r='18' fill='%23ffffff'/><path d='M20 86 c0-20 14-32 30-32 s30 12 30 32' fill='%23ffffff'/></svg>",
@@ -231,32 +307,28 @@
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
       updateLivePreview();
+      const dropzone = document.getElementById('mediaUploadSection');
+      if (dropzone) {
+        ['dragenter','dragover'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('ring-2','ring-sky-400','rounded-xl'); }));
+        ['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('ring-2','ring-sky-400','rounded-xl'); }));
+        dropzone.addEventListener('drop', e => { const files = Array.from(e.dataTransfer.files || []); handleFilesArray(files); });
+      }
     });
 
     function switchTab(type) {
       currentTab = type;
-      const tabTeacherBtn = document.getElementById('tabTeacherBtn');
-      const tabMeetingBtn = document.getElementById('tabMeetingBtn');
-      const teacherDetailsSection = document.getElementById('teacherDetailsSection');
-      const qualityReportDetailsSection = document.getElementById('qualityReportDetailsSection');
-      const actionRequiredSection = document.getElementById('actionRequiredSection');
-      const reportedByFieldContainer = document.getElementById('reportedByFieldContainer');
-
-      if (type === 'teacher') {
-        tabTeacherBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 bg-white text-sky-700 shadow-sm";
-        tabMeetingBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900";
-        teacherDetailsSection.classList.remove('hidden');
-        qualityReportDetailsSection.classList.add('hidden');
-        actionRequiredSection.classList.remove('hidden');
-        reportedByFieldContainer.classList.remove('hidden');
-      } else {
-        tabMeetingBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 bg-white text-sky-700 shadow-sm";
-        tabTeacherBtn.className = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900";
-        teacherDetailsSection.classList.add('hidden');
-        qualityReportDetailsSection.classList.remove('hidden');
-        actionRequiredSection.classList.add('hidden');
-        reportedByFieldContainer.classList.add('hidden');
-      }
+      const active = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 bg-white text-sky-700 shadow-sm";
+      const inactive = "flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900";
+      ['teacher','meeting','revision'].forEach(t => { const b = document.getElementById(t === 'teacher' ? 'tabTeacherBtn' : t === 'meeting' ? 'tabMeetingBtn' : 'tabRevisionBtn'); b.className = t === type ? active : inactive; });
+      document.getElementById('teacherDetailsSection').classList.toggle('hidden', type !== 'teacher');
+      document.getElementById('qualityReportDetailsSection').classList.toggle('hidden', type === 'teacher');
+      document.getElementById('actionRequiredSection').classList.toggle('hidden', type !== 'teacher');
+      document.getElementById('reportedByFieldContainer').classList.toggle('hidden', type !== 'teacher');
+      document.getElementById('reportDescriptionSection').classList.toggle('hidden', type === 'revision');
+      document.getElementById('revisionDetailsSection').classList.toggle('hidden', type !== 'revision');
+      document.getElementById('revisionQueueActions').classList.toggle('hidden', type !== 'revision');
+      const qTitle = document.querySelector('#qualityReportDetailsSection h3');
+      qTitle.innerHTML = type === 'revision' ? '<i class="fa-solid fa-book-open-reader"></i> Revision Report Details' : '<i class="fa-solid fa-clipboard-check"></i> Quality Report Details';
       updateLivePreview();
     }
 
@@ -292,6 +364,11 @@
 
     function handleMultipleMediaUpload(event) {
       const files = Array.from(event.target.files);
+      handleFilesArray(files);
+      event.target.value = '';
+    }
+
+    function handleFilesArray(files) {
       files.forEach(file => {
         const reader = new FileReader();
         const fileType = determineFileType(file);
@@ -309,7 +386,6 @@
         };
         reader.readAsDataURL(file);
       });
-      event.target.value = '';
     }
 
     function determineFileType(file) {
@@ -428,7 +504,7 @@
       const qualitySpecialist = document.getElementById('qualitySpecialist').value.trim();
       const qualityTeacherName = document.getElementById('qualityTeacherName').value.trim();
       const actionRequired = document.getElementById('actionRequired').value;
-      const reportDescription = document.getElementById('reportDescription').value || 'No description provided for this report.';
+      const reportDescription = currentTab === 'revision' ? (document.getElementById('revisionDetails').value || 'No revision details provided.') : (document.getElementById('reportDescription').value || 'No description provided for this report.');
 
       const avatarSrc = teacherPhotoData || defaultAvatars[currentAvatarPreset];
 
@@ -437,12 +513,12 @@
       // The whole section is hidden when both fields are empty.
       let qualityReportDetailsBlock = '';
 
-      if (currentTab === 'meeting' && (qualitySpecialist || qualityTeacherName)) {
+      if ((currentTab === 'meeting' || currentTab === 'revision') && (qualitySpecialist || qualityTeacherName)) {
         qualityReportDetailsBlock = `
           <div class="mb-6 p-4 bg-purple-50 rounded-xl border border-purple-100">
             <h4 class="text-xs font-bold uppercase tracking-wider text-purple-800 mb-3 flex items-center gap-2">
               <i class="fa-solid fa-clipboard-check"></i>
-              Quality Report Details
+              ${currentTab === 'revision' ? 'Revision Report Details' : 'Quality Report Details'}
             </h4>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -582,13 +658,13 @@
               <img src="https://logopng-omega.vercel.app/file.png" alt="Logo" class="h-11 w-auto object-contain" onerror="this.src='https://placehold.co/120x40?text=Elkheta'">
               <div>
                 <span class="text-xs font-bold uppercase tracking-wider text-sky-600 block">Elkheta Educational Content Quality</span>
-                <h1 class="text-xl font-extrabold text-slate-900">${currentTab === 'teacher' ? 'Course Assessment Report' : 'Quality Report'}</h1>
+                <h1 class="text-xl font-extrabold text-slate-900">${currentTab === 'teacher' ? 'Course Assessment Report' : currentTab === 'revision' ? 'Revisions Report' : 'Quality Report'}</h1>
               </div>
             </div>
             
             <div class="flex flex-col items-end">
-              <span class="inline-block px-3 py-1 rounded-full text-xs font-bold ${currentTab === 'teacher' ? 'bg-sky-100 text-sky-800 border border-sky-200' : 'bg-purple-100 text-purple-800 border border-purple-200'}">
-                ${currentTab === 'teacher' ? 'Academic Review' : 'Quality Review'}
+              <span class="inline-block px-3 py-1 rounded-full text-xs font-bold ${currentTab === 'teacher' ? 'bg-sky-100 text-sky-800 border border-sky-200' : currentTab === 'revision' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-purple-100 text-purple-800 border border-purple-200'}">
+                ${currentTab === 'teacher' ? 'Academic Review' : currentTab === 'revision' ? 'Revision Review' : 'Quality Review'}
               </span>
               <span class="text-xs font-semibold text-slate-500 mt-1.5 font-mono tracking-tight">${reportDate}</span>
             </div>
@@ -624,7 +700,7 @@
 
           <!-- Description Section -->
           <div class="space-y-2">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">Report Description</h4>
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500">${currentTab === 'revision' ? 'Revision Details' : 'Report Description'}</h4>
             <div dir="auto" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/60 p-4 rounded-xl border border-slate-100 shadow-inner">
               ${escapeHtml(reportDescription)}
             </div>
@@ -647,7 +723,8 @@
 
     function updateLivePreview() {
       const container = document.getElementById('reportPreviewContainer');
-      container.innerHTML = generateReportHTMLString(false);
+      if (currentTab === 'revision') container.innerHTML = revisionCollectionPreviewHTML(getAllRevisionEntries(true)) || generateReportHTMLString(false);
+      else container.innerHTML = generateReportHTMLString(false);
     }
 
     function escapeHtml(text) {
@@ -660,11 +737,189 @@
         .replace(/'/g, "&#039;");
     }
 
+
+
+
+    function getRevisionEntryFromForm() {
+      const value = id => document.getElementById(id)?.value?.trim() || '';
+      return { id:'revision_'+Date.now()+'_'+Math.random().toString(36).slice(2,8), createdBy:value('createdBy'), reportDate:value('reportDate')||new Date().toISOString().split('T')[0], grade:value('grade'), subject:value('subject'), qualitySpecialist:value('qualitySpecialist'), qualityTeacherName:value('qualityTeacherName'), revisionDetails:value('revisionDetails'), mediaFiles:JSON.parse(JSON.stringify(mediaFiles)) };
+    }
+    function revisionEntryHasContent(r) { return !!(r.subject||r.grade||r.revisionDetails||r.mediaFiles?.length); }
+    function addRevisionToBatch() {
+      const r=getRevisionEntryFromForm();
+      if(!r.subject){alert('Please enter the Subject for this revision first.');document.getElementById('subject').focus();return;}
+      if(!r.revisionDetails&&!r.mediaFiles.length){alert('Please add Revision Details or at least one attachment before adding this revision.');document.getElementById('revisionDetails').focus();return;}
+      if (editingRevisionId) {
+        r.id = editingRevisionId;
+        const index = revisionQueue.findIndex(item => item.id === editingRevisionId);
+        if (index >= 0) revisionQueue[index] = r;
+      } else {
+        revisionQueue.push(r);
+      }
+      clearRevisionEditor();
+      renderRevisionQueue();
+      updateLivePreview();
+    }
+    function clearRevisionEditor() {
+      ['createdBy','grade','subject','qualitySpecialist','qualityTeacherName','revisionDetails'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('reportDate').value=new Date().toISOString().split('T')[0];
+      mediaFiles=[];
+      editingRevisionId=null;
+      const btn=document.getElementById('revisionSubmitBtn');
+      if(btn)btn.innerHTML='<i class="fa-solid fa-plus-circle"></i> Add This Revision & Start Another';
+      document.getElementById('cancelRevisionEditBtn')?.classList.add('hidden');
+      renderStagedMediaList();
+    }
+    function editRevisionInBatch(id) {
+      const r=revisionQueue.find(item=>item.id===id);
+      if(!r)return;
+      editingRevisionId=id;
+      const fields={createdBy:r.createdBy,reportDate:r.reportDate,grade:r.grade,subject:r.subject,qualitySpecialist:r.qualitySpecialist,qualityTeacherName:r.qualityTeacherName,revisionDetails:r.revisionDetails};
+      Object.entries(fields).forEach(([key,val])=>{const el=document.getElementById(key);if(el)el.value=val||'';});
+      mediaFiles=JSON.parse(JSON.stringify(r.mediaFiles||[]));
+      renderStagedMediaList();
+      const btn=document.getElementById('revisionSubmitBtn');
+      btn.innerHTML='<i class="fa-solid fa-floppy-disk"></i> Save Changes to This Revision';
+      document.getElementById('cancelRevisionEditBtn')?.classList.remove('hidden');
+      updateLivePreview();
+      document.getElementById('revisionDetailsSection').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+    function cancelRevisionEdit() {
+      clearRevisionEditor();
+      updateLivePreview();
+    }
+    function removeRevisionFromBatch(id){
+      revisionQueue=revisionQueue.filter(r=>r.id!==id);
+      if(editingRevisionId===id)clearRevisionEditor();
+      renderRevisionQueue();updateLivePreview();
+    }
+    function renderRevisionQueue(){
+      const list=document.getElementById('revisionQueueList'),count=document.getElementById('revisionQueueCount');if(!list||!count)return;
+      count.textContent=`${revisionQueue.length} revision${revisionQueue.length===1?'':'s'} added`;
+      if(!revisionQueue.length){list.innerHTML='<div class="text-xs text-slate-400 bg-white border border-dashed border-emerald-200 rounded-lg p-3 text-center">No revisions added yet.</div>';return;}
+      list.innerHTML=revisionQueue.map((r,i)=>`<div class="flex items-center justify-between gap-3 bg-white border ${editingRevisionId===r.id?'border-sky-300 ring-1 ring-sky-100':'border-emerald-100'} rounded-lg p-3"><div class="min-w-0"><p class="text-xs font-bold text-slate-800">${i+1}. ${escapeHtml(r.subject||'Untitled subject')} <span class="font-normal text-slate-500">• ${escapeHtml(r.grade||'No grade')}</span></p><p class="text-[11px] text-slate-500 mt-1">${escapeHtml(r.reportDate||'')} · ${(r.mediaFiles||[]).length} attachment(s)${editingRevisionId===r.id?' · Editing':''}</p></div><div class="flex items-center gap-1 shrink-0"><button type="button" onclick="editRevisionInBatch('${r.id}')" class="text-sky-700 hover:bg-sky-50 rounded-lg px-2.5 py-2 text-xs font-semibold"><i class="fa-solid fa-pen"></i> Edit</button><button type="button" onclick="removeRevisionFromBatch('${r.id}')" class="text-rose-600 hover:bg-rose-50 rounded-lg px-2.5 py-2 text-xs font-semibold"><i class="fa-solid fa-trash"></i> Remove</button></div></div>`).join('');
+    }
+    function getAllRevisionEntries(includeDraft=true){const entries=revisionQueue.map(r=>JSON.parse(JSON.stringify(r)));if(includeDraft){const draft=getRevisionEntryFromForm();if(revisionEntryHasContent(draft))entries.push(draft);}return entries;}
+    function revisionCollectionPreviewHTML(entries){
+      if(!entries.length)return '';
+      return `<div class="p-6 sm:p-8 bg-white font-sans text-slate-800"><div class="flex items-center justify-between border-b border-slate-200 pb-5 mb-6"><div class="flex items-center gap-3"><img src="https://logopng-omega.vercel.app/file.png" alt="Elkheta Logo" class="h-11 w-auto object-contain"><div><span class="text-xs font-bold uppercase tracking-wider text-sky-600 block">Elkheta Educational Content Quality</span><h1 class="text-xl font-extrabold text-slate-900">Revisions Reports Collection</h1></div></div><span class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">${entries.length} Revision(s)</span></div>
+      ${entries.map((r,i)=>`<section class="revision-entry mb-6 border border-slate-200 rounded-xl overflow-hidden" data-subject="${escapeHtml(r.subject||'')}" data-grade="${escapeHtml(r.grade||'')}" data-teacher="${escapeHtml(r.qualityTeacherName||'')}"><div class="bg-emerald-50 border-b border-emerald-100 px-4 py-3 flex items-center justify-between gap-3"><h2 class="font-bold text-emerald-900 text-sm">Revision ${i+1}: ${escapeHtml(r.subject||'Subject not specified')}</h2><span class="text-xs text-emerald-700">${escapeHtml(r.reportDate||'')}</span></div><div class="p-4"><div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs mb-4">${[['Created By',r.createdBy],['Grade / Year',r.grade],['Subject',r.subject],['Quality Specialist',r.qualitySpecialist],["Teacher's Name",r.qualityTeacherName]].filter(x=>x[1]).map(x=>`<div><span class="block text-[10px] uppercase font-bold text-slate-400 mb-1">${x[0]}</span><span class="font-semibold text-slate-700">${escapeHtml(x[1])}</span></div>`).join('')}</div><h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Revision Details</h3><div class="text-sm leading-relaxed whitespace-pre-wrap bg-slate-50 p-4 rounded-lg border border-slate-100">${escapeHtml(r.revisionDetails||'No revision details provided.')}</div>${(r.mediaFiles||[]).length?`<div class="mt-4"><h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Attachments (${r.mediaFiles.length})</h3><div class="grid grid-cols-2 md:grid-cols-3 gap-3">${r.mediaFiles.map(f=>`<button type="button" onclick="openMediaModal('${f.id}')" class="text-left border border-slate-200 rounded-lg p-3 hover:border-emerald-300 hover:shadow-sm"><div class="text-2xl text-emerald-600 mb-2"><i class="fa-solid ${f.type==='image'?'fa-image':f.type==='video'?'fa-file-video':f.type==='audio'?'fa-file-audio':f.type==='pdf'?'fa-file-pdf':'fa-file'}"></i></div><div class="text-xs font-semibold text-slate-700 break-words">${escapeHtml(f.name)}</div><div class="text-[10px] text-slate-400 mt-1">${escapeHtml(f.size||'')}</div></button>`).join('')}</div></div>`:''}</div></section>`).join('')}
+      <div class="mt-10 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400"><span>Generated securely by ECQ Report Builder</span><span>Elkheta Educational Content Quality</span></div></div>`;
+    }
+
+    function startNewReport() {
+      if (!confirm('Start a new report? Make sure the current report is saved first.')) return;
+      document.getElementById('reportForm').reset();
+      document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+      currentTab = 'teacher'; teacherPhotoData = null; currentAvatarPreset = 'male'; mediaFiles = []; revisionQueue = []; editingRevisionId = null; editingReportId = null;
+      renderStagedMediaList(); renderRevisionQueue(); switchTab('teacher'); updateLivePreview();
+    }
+
+    function getCurrentReportRecord() {
+      const value = id => document.getElementById(id)?.value || '';
+      return {
+        id: editingReportId || ('report_' + Date.now() + '_' + Math.random().toString(36).slice(2,8)),
+        type: currentTab, createdAt: new Date().toISOString(),
+        reportedBy: value('reportedBy'), createdBy: value('createdBy'), reportDate: value('reportDate'),
+        grade: value('grade'), subject: value('subject'), qualitySpecialist: value('qualitySpecialist'),
+        qualityTeacherName: value('qualityTeacherName'), teacherName: value('teacherName'),
+        actionRequired: value('actionRequired'), reportDescription: value('reportDescription'),
+        revisionDetails: value('revisionDetails'), teacherPhotoData, currentAvatarPreset,
+        mediaFiles: JSON.parse(JSON.stringify(mediaFiles)),
+        revisions: currentTab === 'revision' ? getAllRevisionEntries(true) : []
+      };
+    }
+
+    async function saveReportToLibrary() {
+      const subject = document.getElementById('subject').value.trim();
+      if (currentTab !== 'revision' && !subject) { alert('Please enter the Subject before saving the report.'); document.getElementById('subject').focus(); return; }
+      if (currentTab === 'revision' && !getAllRevisionEntries(true).length) { alert('Add at least one revision before saving this collection.'); return; }
+      const record = getCurrentReportRecord();
+      if (currentTab === 'revision') { const entries=record.revisions||[]; record.subject=[...new Set(entries.map(x=>x.subject).filter(Boolean))].join(', '); record.grade=[...new Set(entries.map(x=>x.grade).filter(Boolean))].join(', '); record.reportDate=entries[0]?.reportDate||record.reportDate; record.qualitySpecialist=entries.find(x=>x.qualitySpecialist)?.qualitySpecialist||''; record.qualityTeacherName=entries.find(x=>x.qualityTeacherName)?.qualityTeacherName||''; record.mediaFiles=entries.flatMap(x=>x.mediaFiles||[]); }
+      try {
+        await dbRequest('readwrite', 'put', record);
+        editingReportId = record.id;
+        alert('Report saved successfully in your local Reports Library.');
+      } catch (err) { console.error(err); alert('Could not save the report locally. Please check browser storage permissions or available space.'); }
+    }
+
+    async function openReportsLibrary() {
+      const modal = document.getElementById('reportsLibraryModal');
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+      ['librarySearch','libraryTypeFilter','librarySubjectFilter','libraryGradeFilter','libraryTeacherFilter','librarySpecialistFilter','libraryDateFilter'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      await renderReportsLibrary();
+    }
+    function closeReportsLibrary() { const modal=document.getElementById('reportsLibraryModal'); modal.classList.add('hidden'); modal.classList.remove('flex'); }
+
+    async function renderReportsLibrary() {
+      const list = document.getElementById('reportsLibraryList');
+      try {
+        const reports = await dbRequest('readonly', 'all');
+        const q = (document.getElementById('librarySearch').value || '').trim().toLowerCase();
+        const type = document.getElementById('libraryTypeFilter').value;
+        const subject = (document.getElementById('librarySubjectFilter').value || '').trim().toLowerCase();
+        const grade = (document.getElementById('libraryGradeFilter').value || '').trim().toLowerCase();
+        const teacher = (document.getElementById('libraryTeacherFilter').value || '').trim().toLowerCase();
+        const specialist = (document.getElementById('librarySpecialistFilter').value || '').trim().toLowerCase();
+        const date = document.getElementById('libraryDateFilter').value;
+        const filtered = reports.filter(r => {
+          const nested=Array.isArray(r.revisions)?r.revisions:[];
+          const revisionHay=nested.map(x=>[x.subject,x.grade,x.createdBy,x.qualitySpecialist,x.qualityTeacherName,x.reportDate].join(' ')).join(' ');
+          const hay=[r.subject,r.grade,r.createdBy,r.qualitySpecialist,r.qualityTeacherName,r.teacherName,r.reportedBy,revisionHay].join(' ').toLowerCase();
+          const subjectMatch=!subject||(r.subject||'').toLowerCase().includes(subject)||nested.some(x=>(x.subject||'').toLowerCase().includes(subject));
+          const gradeMatch=!grade||(r.grade||'').toLowerCase().includes(grade)||nested.some(x=>(x.grade||'').toLowerCase().includes(grade));
+          const teacherMatch=!teacher||(r.qualityTeacherName||r.teacherName||'').toLowerCase().includes(teacher)||nested.some(x=>(x.qualityTeacherName||'').toLowerCase().includes(teacher));
+          const specialistMatch=!specialist||(r.qualitySpecialist||'').toLowerCase().includes(specialist)||nested.some(x=>(x.qualitySpecialist||'').toLowerCase().includes(specialist));
+          const dateMatch=!date||r.reportDate===date||nested.some(x=>x.reportDate===date);
+          return (!q||hay.includes(q))&&(!type||r.type===type)&&subjectMatch&&gradeMatch&&teacherMatch&&specialistMatch&&dateMatch;
+        }).sort((a,b) => (b.reportDate||'').localeCompare(a.reportDate||'') || (b.createdAt||'').localeCompare(a.createdAt||''));
+        document.getElementById('libraryCount').textContent = `${filtered.length} of ${reports.length} reports`;
+        if (!filtered.length) { list.innerHTML = '<div class="text-center py-14 text-slate-400"><i class="fa-solid fa-folder-open text-3xl mb-3"></i><p class="font-semibold">No reports found</p><p class="text-xs mt-1">Save a report or change your filters.</p></div>'; return; }
+        const labels = {teacher:'Course Assessment',meeting:'Quality Report',revision:'Revisions Report'};
+        list.innerHTML = filtered.map(r => `<div class="border border-slate-200 rounded-xl p-4 hover:border-sky-300 hover:shadow-sm transition">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="min-w-0"><div class="flex flex-wrap items-center gap-2 mb-1"><span class="text-[10px] font-bold uppercase tracking-wide px-2 py-1 rounded-full ${r.type==='revision'?'bg-emerald-100 text-emerald-800':r.type==='meeting'?'bg-purple-100 text-purple-800':'bg-sky-100 text-sky-800'}">${labels[r.type]||'Report'}</span><span class="text-xs text-slate-400">${escapeHtml(r.reportDate||'')}</span></div>
+          <h3 class="font-bold text-slate-800 truncate">${escapeHtml(r.subject||'Untitled Subject')} <span class="font-normal text-slate-500">• ${escapeHtml(r.grade||'')}</span></h3>
+          <p class="text-xs text-slate-500 mt-1">${escapeHtml(r.qualityTeacherName||r.teacherName||'No teacher')} · ${escapeHtml(r.qualitySpecialist||r.createdBy||'No specialist')} · ${r.type==='revision' && r.revisions ? r.revisions.length+' revision(s)' : (r.mediaFiles||[]).length+' attachment(s)'}</p></div>
+          <div class="flex items-center gap-2 shrink-0"><button onclick="loadReportFromLibrary('${r.id}')" class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold"><i class="fa-solid fa-eye mr-1"></i> Open</button><button onclick="deleteReportFromLibrary('${r.id}')" class="px-3 py-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold"><i class="fa-solid fa-trash mr-1"></i> Delete</button></div>
+          </div></div>`).join('');
+      } catch(err) { console.error(err); list.innerHTML='<div class="text-center text-rose-600 py-10">Local storage could not be accessed in this browser.</div>'; }
+    }
+
+    async function loadReportFromLibrary(id) {
+      try {
+        const reports = await dbRequest('readonly','all'); const r=reports.find(x=>x.id===id); if(!r) return;
+        const map={reportedBy:'reportedBy',createdBy:'createdBy',reportDate:'reportDate',grade:'grade',subject:'subject',qualitySpecialist:'qualitySpecialist',qualityTeacherName:'qualityTeacherName',teacherName:'teacherName',actionRequired:'actionRequired',reportDescription:'reportDescription',revisionDetails:'revisionDetails'};
+        Object.entries(map).forEach(([field,id])=>{const el=document.getElementById(id); if(el) el.value=r[field]||'';});
+        currentTab=r.type||'teacher'; revisionQueue=Array.isArray(r.revisions)?JSON.parse(JSON.stringify(r.revisions)):[]; editingRevisionId=null;
+        if(currentTab==='revision'){['createdBy','grade','subject','qualitySpecialist','qualityTeacherName','revisionDetails'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('reportDate').value=new Date().toISOString().split('T')[0];}
+        teacherPhotoData=r.teacherPhotoData||null; currentAvatarPreset=r.currentAvatarPreset||'male'; mediaFiles=currentTab==='revision'?[]:(Array.isArray(r.mediaFiles)?r.mediaFiles:[]); editingReportId=r.id;
+        renderStagedMediaList(); renderRevisionQueue(); switchTab(currentTab); closeReportsLibrary(); updateLivePreview();
+      } catch(err) { console.error(err); alert('Could not open this report.'); }
+    }
+    async function deleteReportFromLibrary(id) {
+      if(!confirm('Delete this report permanently from this browser?')) return;
+      try { await dbRequest('readwrite','delete',id); if(editingReportId===id) editingReportId=null; await renderReportsLibrary(); }
+      catch(err) { console.error(err); alert('Could not delete this report.'); }
+    }
+
+
+    function downloadRevisionCollection(){
+      const entries=getAllRevisionEntries(true);
+      if(!entries.length){alert('Add at least one revision before downloading.');return;}
+      if(entries.some(r=>!r.subject)){alert('Every revision must have a Subject before downloading.');return;}
+      const allMedia=entries.flatMap(r=>r.mediaFiles||[]),body=revisionCollectionPreviewHTML(entries);
+      const filterOptions={subjects:[...new Set(entries.map(r=>(r.subject||'').trim()).filter(Boolean))].sort(),grades:[...new Set(entries.map(r=>(r.grade||'').trim()).filter(Boolean))].sort(),teachers:[...new Set(entries.map(r=>(r.qualityTeacherName||'').trim()).filter(Boolean))].sort()};
+      const full=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Revisions Reports Collection - Elkheta</title><script src="https://cdn.tailwindcss.com"><\/script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>@media print{.no-print{display:none!important}.revision-entry{break-inside:avoid}}</style></head><body class="bg-slate-100 p-4 sm:p-8 font-sans"><div class="max-w-4xl mx-auto mb-4 flex justify-end no-print"><button onclick="window.print()" class="bg-sky-600 text-white px-4 py-2 rounded-lg text-xs font-semibold"><i class="fa-solid fa-print mr-1"></i> Print / Save as PDF</button></div><div class="max-w-4xl mx-auto mb-4 bg-white border border-slate-200 rounded-xl p-4 no-print"><div class="flex items-center justify-between gap-2 mb-3"><h2 class="font-bold text-slate-800 text-sm">Filter Revisions</h2><button type="button" onclick="resetRevisionFilters()" class="text-xs font-semibold text-sky-700 hover:underline">Clear filters</button></div><div class="grid grid-cols-1 sm:grid-cols-3 gap-3"><label class="text-xs font-semibold text-slate-600">Filter by subject<select id="filterSubject" class="mt-1 w-full border border-slate-300 rounded-lg p-2 bg-white text-sm"><option value="">All subjects</option></select></label><label class="text-xs font-semibold text-slate-600">Filter by grade<select id="filterGrade" class="mt-1 w-full border border-slate-300 rounded-lg p-2 bg-white text-sm"><option value="">All grades</option></select></label><label class="text-xs font-semibold text-slate-600">Filter by teacher<select id="filterTeacher" class="mt-1 w-full border border-slate-300 rounded-lg p-2 bg-white text-sm"><option value="">All teachers</option></select></label></div><p id="filterCount" class="text-xs text-slate-500 mt-3"></p></div><div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">${body}</div><div id="mediaModal" class="fixed inset-0 z-50 bg-slate-950/85 hidden items-center justify-center p-4"><div class="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden"><div class="bg-slate-900 text-white p-3 flex justify-between"><span id="modalTitle" class="text-sm font-semibold">Attachment Preview</span><button onclick="closeMediaModal()" class="px-3">✕</button></div><div id="modalBody" class="p-4 overflow-auto flex-1 bg-slate-950/40 flex items-center justify-center"></div></div></div><script>const embeddedMedia=${JSON.stringify(allMedia)};const revisionFilterOptions=${JSON.stringify(filterOptions)};function populateRevisionFilter(id,values,label){const select=document.getElementById(id);values.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=value;select.appendChild(option);});}populateRevisionFilter('filterSubject',revisionFilterOptions.subjects);populateRevisionFilter('filterGrade',revisionFilterOptions.grades);populateRevisionFilter('filterTeacher',revisionFilterOptions.teachers);function applyRevisionFilters(){const subject=document.getElementById('filterSubject').value.toLowerCase(),grade=document.getElementById('filterGrade').value.toLowerCase(),teacher=document.getElementById('filterTeacher').value.toLowerCase();let shown=0;document.querySelectorAll('.revision-entry').forEach(card=>{const ok=(!subject||(card.dataset.subject||'').toLowerCase()===subject)&&(!grade||(card.dataset.grade||'').toLowerCase()===grade)&&(!teacher||(card.dataset.teacher||'').toLowerCase()===teacher);card.style.display=ok?'':'none';if(ok)shown++;});document.getElementById('filterCount').textContent='Showing '+shown+' of '+document.querySelectorAll('.revision-entry').length+' revisions';}function resetRevisionFilters(){['filterSubject','filterGrade','filterTeacher'].forEach(id=>document.getElementById(id).value='');applyRevisionFilters();}['filterSubject','filterGrade','filterTeacher'].forEach(id=>document.getElementById(id).addEventListener('change',applyRevisionFilters));applyRevisionFilters();function openMediaModal(id){const f=embeddedMedia.find(x=>x.id===id);if(!f)return;document.getElementById('modalTitle').textContent=f.name;const b=document.getElementById('modalBody');b.innerHTML='';if(f.type==='image')b.innerHTML='<img class="max-h-[75vh] max-w-full object-contain" src="'+f.dataUrl+'">';else if(f.type==='video')b.innerHTML='<video controls autoplay class="max-h-[75vh] max-w-full"><source src="'+f.dataUrl+'" type="'+f.mimeType+'"></video>';else if(f.type==='audio')b.innerHTML='<audio controls autoplay class="w-full"><source src="'+f.dataUrl+'" type="'+f.mimeType+'"></audio>';else if(f.type==='pdf'||f.type==='html')b.innerHTML='<iframe class="w-full h-[75vh] bg-white" src="'+f.dataUrl+'"></iframe>';else b.textContent='Preview is not available for this file type.';const m=document.getElementById('mediaModal');m.classList.remove('hidden');m.classList.add('flex');}function closeMediaModal(){const m=document.getElementById('mediaModal');m.classList.add('hidden');m.classList.remove('flex');document.getElementById('modalBody').innerHTML='';}document.getElementById('mediaModal').addEventListener('click',e=>{if(e.target.id==='mediaModal')closeMediaModal();});<\/script></body></html>`;
+      const blob=new Blob([full],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Revisions_Reports_Collection_'+new Date().toISOString().split('T')[0]+'.html';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+
     // Download Standalone Self-contained HTML file
     function downloadReport() {
+      if(currentTab==='revision'){downloadRevisionCollection();return;}
       const reportBodyContent = generateReportHTMLString(true);
       const subject = document.getElementById('subject').value || 'Report';
-      const cleanFileName = (currentTab === 'teacher' ? 'Course_Assessment_' : 'Quality_Report_') + 
+      const cleanFileName = (currentTab === 'teacher' ? 'Course_Assessment_' : currentTab === 'revision' ? 'Revisions_Report_' : 'Quality_Report_') + 
                             subject.replace(/[^a-zA-Z0-9]/g, '_') + '_' + 
                             new Date().toISOString().split('T')[0] + '.html';
 
@@ -675,7 +930,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${currentTab === 'teacher' ? 'Course Assessment Report' : 'Quality Report'} - Elkheta</title>
+  <title>${currentTab === 'teacher' ? 'Course Assessment Report' : currentTab === 'revision' ? 'Revisions Report' : 'Quality Report'} - Elkheta</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -743,39 +998,3 @@
         '</video>';
       } else if (file.type === 'pdf') {
         modalIcon.className = "fa-solid fa-file-pdf text-red-400";
-        modalBody.innerHTML = '<iframe src="' + file.dataUrl + '#toolbar=1" class="w-full h-[75vh] rounded-xl border border-slate-700 bg-white"></iframe>';
-      } else if (file.type === 'html') {
-        modalIcon.className = "fa-solid fa-file-code text-sky-400";
-        modalBody.innerHTML = '<iframe src="' + file.dataUrl + '" class="w-full h-[75vh] rounded-xl border border-slate-700 bg-white" sandbox="allow-scripts allow-same-origin"></iframe>';
-      }
-
-      modal.classList.remove('hidden');
-    }
-
-    function closeModal() {
-      const modal = document.getElementById('mediaModal');
-      const modalBody = document.getElementById('modalBody');
-      modalBody.innerHTML = '';
-      modal.classList.add('hidden');
-    }
-
-    document.getElementById('mediaModal').addEventListener('click', (e) => {
-      if (e.target.id === 'mediaModal') closeModal();
-    });
-  <\/script>
-</body>
-</html>`;
-
-      const blob = new Blob([fullHTMLDocument], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = cleanFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  </script>
-</body>
-</html>
