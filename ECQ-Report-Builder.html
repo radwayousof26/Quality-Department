@@ -997,4 +997,39 @@
           '<source src="' + file.dataUrl + '" type="' + file.mimeType + '">' +
         '</video>';
       } else if (file.type === 'pdf') {
-        modalIcon.className = "fa-solid fa-file-pdf text-red-400";
+        modalIcon.className = "fa-solid fa-file-pdf text-red-400";        modalBody.innerHTML = '<iframe src="' + file.dataUrl + '#toolbar=1" class="w-full h-[75vh] rounded-xl border border-slate-700 bg-white"></iframe>';
+      } else if (file.type === 'html') {
+        modalIcon.className = "fa-solid fa-file-code text-sky-400";
+        modalBody.innerHTML = '<iframe src="' + file.dataUrl + '" class="w-full h-[75vh] rounded-xl border border-slate-700 bg-white" sandbox="allow-scripts allow-same-origin"></iframe>';
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('mediaModal');
+      const modalBody = document.getElementById('modalBody');
+      modalBody.innerHTML = '';
+      modal.classList.add('hidden');
+    }
+
+    document.getElementById('mediaModal').addEventListener('click', (e) => {
+      if (e.target.id === 'mediaModal') closeModal();
+    });
+  <\/script>
+</body>
+</html>`;
+
+      const blob = new Blob([fullHTMLDocument], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = cleanFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
